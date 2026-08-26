@@ -537,9 +537,6 @@ export default function App() {
             <span className="text-sm font-semibold tracking-[0.28em] text-ink sm:tracking-[0.3em]">
               GOLD PLANNER
             </span>
-            <span className="mt-1 font-mono text-[9.5px] font-semibold tracking-[0.18em] text-stone-500">
-              by GOLD PLANNER
-            </span>
           </span>
         </div>
 
@@ -942,7 +939,6 @@ export default function App() {
                   <LogoMark className="h-6 w-auto" />
                   <span className="flex flex-col leading-none">
                     <span className="font-semibold tracking-[0.2em] text-ink">GOLD PLANNER</span>
-                    <span className="mt-0.5 font-mono text-[9px] tracking-[0.16em] text-stone-500">by GOLD PLANNER</span>
                   </span>
                 </span>
                 <button

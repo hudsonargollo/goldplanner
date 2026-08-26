@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Mail, Lock, ArrowRight, ArrowLeft, ShieldQuestion, UserPlus } from "lucide-react";
 import { api } from "@/lib/api";
 import { Spinner } from "@/components/ui";
-import LogoMark from "@/components/LogoMark";
 
 const ADMIN_CONTACT = "hudsonargollo2@gmail.com";
 
@@ -92,16 +91,9 @@ export default function Login({ onAuthed }) {
         className="relative z-10 w-full max-w-sm"
       >
         <div className="mb-8 flex flex-col items-center text-center">
-          <LogoMark className="mb-4 h-16 w-auto" />
           <span className="text-lg font-semibold tracking-[0.32em] text-ink">
             GOLD PLANNER
           </span>
-          <span className="mt-1 font-mono text-[10px] font-semibold tracking-[0.22em] text-stone-500">
-            by GOLD PLANNER
-          </span>
-          <p className="serif mt-2 text-[15px] text-green">
-            Ordo · Tekhnē · Permanentia
-          </p>
         </div>
 
         <div className="rounded-2xl surface-2 p-7">

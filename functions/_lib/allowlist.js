@@ -6,11 +6,13 @@
 // a later phase, then delete this file.
 export const ALLOWED_EMAILS = [
   "hudsonargollo2@gmail.com",
+  "hudsonargollo@gmail.com",
 ];
 
 // Matches D1 users.access_role = 'ADMIN' (both seeded as admin — see PRD §4).
 export const ADMIN_EMAILS = [
   "hudsonargollo2@gmail.com",
+  "hudsonargollo@gmail.com",
 ];
 
 const norm = (e) => String(e || "").trim().toLowerCase();

@@ -121,7 +121,6 @@ export default function CustomerShell({ userName, userEmail, userAvatar, onLogou
           <LogoMark className="h-7 w-auto" />
           <span className="flex flex-col leading-none">
             <span className="text-sm font-semibold tracking-[0.28em] text-ink">GOLD PLANNER</span>
-            <span className="mt-0.5 font-mono text-[9px] tracking-[0.16em] text-stone-500">by GOLD PLANNER</span>
           </span>
         </div>
         <div className="flex items-center gap-3">

@@ -40,8 +40,6 @@ export default function EmailStep() {
       <View style={styles.brand}>
         <LogoMark width={72} height={72} />
         <Text style={styles.brandTitle}>GOLD PLANNER</Text>
-        <Text style={styles.brandByline}>by GOLD PLANNER</Text>
-        <Text style={styles.brandSub}>Ordo · Tekhnē · Permanentia</Text>
       </View>
 
       <View style={styles.card}>
