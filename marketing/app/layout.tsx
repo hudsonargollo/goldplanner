@@ -25,9 +25,9 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://goldplanner.clubemkt.digital"),
-  title: "GOLD PLANNER — A tecnologia certa para qualquer problema da sua empresa",
+  title: "GOLD PLANNER — Workflows padrão ouro para sua agência",
   description:
-    "Transformamos necessidades empresariais em produtos, sistemas e ativos digitais construídos para gerar eficiência, diferenciação e escala.",
+    "O painel de controle definitivo para profissionais que precisam rastrear tarefas, alinhar a equipe e encantar clientes sem perder horas faturáveis.",
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },

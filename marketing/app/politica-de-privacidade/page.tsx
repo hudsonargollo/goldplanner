@@ -16,8 +16,8 @@ Esta Política de Privacidade explica de forma clara quais informações podemos
 
 A Gold Planner é uma marca operada por:
 
-PSL DIGITAL LTDA
-CNPJ: 49.037.198/0001-77
+[Razão Social a definir]
+CNPJ: [a definir]
 Endereço: Avenida Miguel Sutil, nº 8388, Sala 409, Santa Rosa, Cuiabá/MT, CEP 78.040-365
 E-mail para assuntos relacionados à privacidade: Matrix@goldplanner.clubemkt.digital
 
@@ -196,8 +196,8 @@ A versão mais recente permanecerá disponível nesta página, acompanhada da da
 Para dúvidas, solicitações ou assuntos relacionados à privacidade e proteção de dados:
 
 GOLD PLANNER
-Operada por PSL DIGITAL LTDA
-CNPJ: 49.037.198/0001-77
+Operada por [Razão Social a definir]
+CNPJ: [a definir]
 E-mail de privacidade: Matrix@goldplanner.clubemkt.digital
 Endereço: Avenida Miguel Sutil, nº 8388, Sala 409, Santa Rosa, Cuiabá/MT, CEP 78.040-365
 

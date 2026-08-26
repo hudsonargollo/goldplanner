@@ -21,8 +21,8 @@ A Gold Planner atua na estruturação de soluções de tecnologia e negócios so
 Para fins destes Termos, a responsável pelo site é:
 
 GOLD PLANNER
-Razão Social: PSL DIGITAL LTDA
-CNPJ: 49.037.198/0001-77
+Razão Social: [Razão Social a definir]
+CNPJ: [a definir]
 E-mail: Matrix@goldplanner.clubemkt.digital
 
 ## 2. FINALIDADE DESTE SITE

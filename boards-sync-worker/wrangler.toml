@@ -1,6 +1,7 @@
 name = "goldplanner-boards-sync"
 main = "src/index.js"
 compatibility_date = "2024-11-01"
+account_id = "cb27e1a67198789eb42d11ab90737652"
 
 [[durable_objects.bindings]]
 name = "BOARDS_SYNC"

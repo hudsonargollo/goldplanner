@@ -717,7 +717,7 @@ footer .base .dark{ font-family:var(--ff-m); font-size:10px; letter-spacing:.24e
       <div class="cols">
         <div class="c"><b>Empresa</b>Razão Social: PSL DIGITAL LTDA<br>CNPJ: 49.037.198/0001-77</div>
         <div class="c"><b>Navegação</b><a href="#arquitetura">arquitetura</a><br><a href="#autoridade">autoridade</a><br><a href="#faq">faq</a><br><a href="https://goldplanner.clubemkt.digital/login">ACESSAR HUB</a></div>
-        <div class="c"><b>Social</b><a href="https://www.linkedin.com/company/goldplannerco" target="_blank" rel="noopener">Gold Planner</a><br><a href="https://instagram.com/goldplanner.co" target="_blank" rel="noopener">@Gold Planner.co</a><br><a href="mailto:Matrix@goldplanner.clubemkt.digital">Matrix@goldplanner.clubemkt.digital</a></div>
+        <div class="c"><b>Social</b><a href="https://www.linkedin.com/company/goldplannerco" target="_blank" rel="noopener">Gold Planner</a><br><a href="https://instagram.com/goldplanner.co" target="_blank" rel="noopener">@goldplanner.co</a><br><a href="mailto:Matrix@goldplanner.clubemkt.digital">Matrix@goldplanner.clubemkt.digital</a></div>
         <div class="c"><b>Legal</b><a href="https://goldplanner.clubemkt.digital/politica-de-privacidade">Política de privacidade</a><br><a href="https://goldplanner.clubemkt.digital/termos-de-uso">Termos de uso</a></div>
       </div>
       <div class="base">

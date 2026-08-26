@@ -2,37 +2,6 @@ import { ArrowRight, Mail } from "lucide-react";
 import Link from "next/link";
 import Logo from "@/components/Logo";
 
-// lucide-react dropped brand/logo glyphs a while back, so these two are
-// drawn by hand — plain currentColor strokes to stay monochrome and match
-// the other footer icons' weight (h-3.5 w-3.5, stroke-width ~2).
-function InstagramIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
-      <rect x="3" y="3" width="18" height="18" rx="5" stroke="currentColor" strokeWidth="2" />
-      <circle cx="12" cy="12" r="4.2" stroke="currentColor" strokeWidth="2" />
-      <circle cx="17.2" cy="6.8" r="1.1" fill="currentColor" />
-    </svg>
-  );
-}
-
-function LinkedinIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
-      <rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="2" />
-      <circle cx="7.5" cy="7.8" r="1.15" fill="currentColor" />
-      <path d="M7.5 11v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <path
-        d="M11.5 17v-3.6c0-1.3.9-2.2 2.1-2.2s2.1.9 2.1 2.2V17"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path d="M11.5 11v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 export default function Footer() {
   return (
     <footer className="relative bg-ink-950 border-t border-ivory/[0.08] overflow-hidden">
@@ -53,14 +22,14 @@ export default function Footer() {
           </div>
           <div className="flex flex-col items-start gap-2 sm:items-end">
             <a
-              href="#qualificacao"
+              href="/login"
               className="group inline-flex items-center gap-2 rounded-lg border border-green-mist/30 bg-green-mist/10 px-6 py-3.5 text-sm font-bold text-green-mist transition-all duration-200 hover:bg-green-mist/20 hover:border-green-mist/50"
             >
-              AGENDAR CALL DE QUALIFICAÇÃO
+              CRIAR MINHA CONTA
               <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
             </a>
             <p className="font-mono text-xs tracking-wide text-sand/50">
-              Leva menos de 3 minutos. Sem compromisso.
+              Leva menos de 1 minuto.
             </p>
           </div>
         </div>
@@ -71,31 +40,17 @@ export default function Footer() {
         <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-10 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1.5 font-mono text-[11px] tracking-wide text-sand/40">
             <p className="text-sand/60">GOLD PLANNER</p>
-            <p>Razão Social: PSL DIGITAL LTDA</p>
-            <p>CNPJ: 49.037.198/0001-77</p>
+            {/* TODO: real legal entity name + CNPJ before this goes live to customers */}
+            <p>Razão Social: [preencher]</p>
+            <p>CNPJ: [preencher]</p>
           </div>
           <div className="flex flex-col gap-2.5 font-mono text-[11px] tracking-wide text-sand/40">
+            {/* TODO: real Instagram/LinkedIn accounts for Gold Planner */}
             <a
-              href="https://instagram.com/goldplanner.co"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="mailto:contato@goldplanner.clubemkt.digital"
               className="inline-flex items-center gap-2 transition-colors hover:text-green-mist"
             >
-              <InstagramIcon className="h-3.5 w-3.5" /> @Gold Planner.co
-            </a>
-            <a
-              href="https://www.linkedin.com/company/goldplannerco"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 transition-colors hover:text-green-mist"
-            >
-              <LinkedinIcon className="h-3.5 w-3.5" /> Gold Planner
-            </a>
-            <a
-              href="mailto:Matrix@goldplanner.clubemkt.digital"
-              className="inline-flex items-center gap-2 transition-colors hover:text-green-mist"
-            >
-              <Mail className="h-3.5 w-3.5" /> Matrix@goldplanner.clubemkt.digital
+              <Mail className="h-3.5 w-3.5" /> contato@goldplanner.clubemkt.digital
             </a>
           </div>
         </div>

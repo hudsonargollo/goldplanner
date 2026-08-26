@@ -9,7 +9,7 @@
 name = "goldplanner-wa-links-redirect"
 main = "./src/index.js"
 compatibility_date = "2024-11-01"
-account_id = "193882a3226d5fb9c3611ea50c95992e"
+account_id = "cb27e1a67198789eb42d11ab90737652"
 
 routes = [
   { pattern = "go.goldplanner.clubemkt.digital", custom_domain = true },
@@ -18,4 +18,4 @@ routes = [
 [[d1_databases]]
 binding = "DB"
 database_name = "hub-goldplanner"
-database_id = "062719db-dc4e-46c0-a9d9-bdb4fef61a30"
+database_id = "305d34fb-a525-45e2-9eb0-67ef552a45b8"

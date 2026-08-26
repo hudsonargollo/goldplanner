@@ -3,11 +3,7 @@
 import { motion, useScroll, useTransform } from "framer-motion";
 import { ArrowUpRight } from "lucide-react";
 
-const LINKS = [
-  { label: "arquitetura", href: "#processo" },
-  { label: "autoridade", href: "#autoridade" },
-  { label: "faq", href: "#faq" },
-];
+const LINKS = [{ label: "depoimentos", href: "#depoimentos" }];
 
 export default function Navbar({
   theme = "dark",
@@ -125,14 +121,14 @@ export default function Navbar({
             ACESSAR HUB
           </a>
           <a
-            href={isLight ? "/#qualificacao" : "#qualificacao"}
+            href="/login"
             className={
               isLight
                 ? "group inline-flex items-center gap-1.5 rounded-md bg-green px-2 sm:px-4 py-1.5 sm:py-2 text-[9.5px] sm:text-[13px] font-semibold uppercase tracking-wide text-ivory transition-all duration-200 hover:bg-green-hover"
                 : "group inline-flex items-center gap-1.5 rounded-md bg-ivory px-2 sm:px-4 py-1.5 sm:py-2 text-[9.5px] sm:text-[13px] font-semibold uppercase tracking-wide text-ink transition-all duration-200 hover:bg-sand"
             }
           >
-            Agendar call
+            Começar agora
             <ArrowUpRight className="h-3 w-3 sm:h-3.5 sm:w-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
           </a>
         </div>

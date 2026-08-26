@@ -14,7 +14,7 @@ name = "goldplanner-hub"
 main = "./worker/hub-entry.js"
 compatibility_date = "2024-11-01"
 compatibility_flags = ["nodejs_compat"]
-account_id = "193882a3226d5fb9c3611ea50c95992e"
+account_id = "cb27e1a67198789eb42d11ab90737652"
 
 routes = [
   # Both the wildcard AND the bare exact path are needed — "/hub/*" does NOT
@@ -22,10 +22,10 @@ routes = [
   # straight through to the marketing site's own 404 page). hub-entry.js's
   # fetch handler already tolerates the bare path correctly; it was only
   # ever the route pattern that was missing it.
-  { pattern = "goldplanner.clubemkt.digital/hub", zone_name = "goldplanner.clubemkt.digital" },
-  { pattern = "goldplanner.clubemkt.digital/hub/*", zone_name = "goldplanner.clubemkt.digital" },
-  { pattern = "goldplanner.clubemkt.digital/task", zone_name = "goldplanner.clubemkt.digital" },
-  { pattern = "goldplanner.clubemkt.digital/task/*", zone_name = "goldplanner.clubemkt.digital" },
+  { pattern = "goldplanner.clubemkt.digital/hub", zone_name = "clubemkt.digital" },
+  { pattern = "goldplanner.clubemkt.digital/hub/*", zone_name = "clubemkt.digital" },
+  { pattern = "goldplanner.clubemkt.digital/task", zone_name = "clubemkt.digital" },
+  { pattern = "goldplanner.clubemkt.digital/task/*", zone_name = "clubemkt.digital" },
 ]
 
 [assets]
@@ -50,12 +50,12 @@ run_worker_first = true
 # safely since it's the same underlying D1/KV, not a copy).
 [[kv_namespaces]]
 binding = "KANBAN"
-id = "b06af75d5fe74e4c83863bf6a36030d0"
+id = "7ca7e269f18f4b938f505883b0933e1c"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "hub-goldplanner"
-database_id = "062719db-dc4e-46c0-a9d9-bdb4fef61a30"
+database_id = "305d34fb-a525-45e2-9eb0-67ef552a45b8"
 
 [vars]
 TASKS_BACKEND = "d1"
