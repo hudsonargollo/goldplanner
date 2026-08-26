@@ -1,0 +1,10 @@
+node_modules
+dist
+dist-portal
+dist-crm
+.wrangler
+.DS_Store
+*.local
+.claude/settings.local.json
+.env
+.dev.vars

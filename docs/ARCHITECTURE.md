@@ -1,0 +1,802 @@
+# Gold Planner Hub — architecture
+
+Everything Gold Planner runs on the web, in one repo, unified under `goldplanner.clubemkt.digital` with no
+subdomains. Four surfaces, four independent Cloudflare deployments, one shared database.
+
+| Path | What | Deployment | Repo location |
+|---|---|---|---|
+| `goldplanner.clubemkt.digital/*` | Marketing site + `/login` | Cloudflare **Pages** (`goldplanner`) | `marketing/` |
+| `goldplanner.clubemkt.digital/hub`, `/task` | Staff ops: kanban, meetings, commercial admin, finance, blog, block builder, gamification, CRM UI | Cloudflare **Worker** (`goldplanner-hub`) | repo root |
+| `goldplanner.clubemkt.digital/portal` | Customer-only: contracts, invoices, add-ons, progress | Cloudflare **Worker** (`goldplanner-portal`) | repo root |
+| `goldplanner.clubemkt.digital/crm` | Lead pipeline, sales, commissions, AI copilot | Cloudflare **Worker** (`goldplanner-crm`) | repo root |
+
+A published visual walkthrough of all of this (with a routing diagram) exists as a Claude
+Artifact — ask in the project chat if you need the link again, or read this document, which
+has the same content in durable form.
+
+## What exists today
+
+The table above is *where* the code lives. This is *what it does* — every real feature
+running in production, by module, regardless of which of the four deployments hosts it.
+Each links to the section with the full detail.
+
+| Module | Capability |
+|---|---|
+| CRM | Sales pipeline — 5-stage Kanban, drag-and-drop, full audit trail (see "The CRM") |
+| CRM | Analytics dashboard — revenue vs. goal, funnel, source breakdown, closer leaderboard, temperature board (hand-rolled SVG, no chart library) |
+| CRM | Business Specialist Copilot — locked-persona AI grounded in a self-improving knowledge base |
+| CRM | WhatsApp/URL link shortener with click tracking, served by its own Worker (`go.goldplanner.clubemkt.digital`) |
+| Marketing | Public qualification form — server-scored hot/warm/cold lead capture (see "Public lead capture") |
+| Hub | Blog — AI-drafted (Claude + Workers AI), nothing publishes without human review |
+| Hub | Block builder — pages/forms/quizzes/funnels from 9 reusable blocks, publishing at `/p`, `/f`, `/n` (see "The block builder") |
+| Hub | Builder gamification — per-person XP/level from ordinary kanban use, no new screen to learn |
+| Portal | Customer self-service — contracts (view + sign), invoices, add-ons, progress meter |
+| All | One session cookie authenticates across all four deployments |
+
+## Why this shape
+
+Cloudflare **Pages** custom domains map one whole (sub)domain to one project — there's no
+way to give a Pages project just `/hub/*` of a domain while something else owns `/`. Cloudflare
+**Workers Routes**, on the other hand, are path-pattern based and resolve by specificity
+regardless of what else is on the zone — so `goldplanner.clubemkt.digital/hub/*` on a Worker correctly
+wins over `goldplanner.clubemkt.digital/*` on a Pages project, with zero coordination needed between them.
+That's the entire trick: the marketing site keeps living on Pages exactly as it always did,
+and three small Workers claim the more specific paths around it.
+
+We tried migrating the marketing site itself onto Workers too (for consistency) and
+deliberately reverted it — see "Marketing site: Pages, not Workers" below.
+
+## The shared-backend trick (`/hub` and `/portal`)
+
+`goldplanner-hub` and `goldplanner-portal` are two different Cloudflare Workers, but they run **the
+same backend code**. The `functions/` directory (Cloudflare Pages Functions — file-based
+routing, e.g. `functions/api/auth/[[path]].js`) was never rewritten. Instead:
+
+1. `wrangler pages functions build --outdir=./dist/_worker.js/` compiles the whole
+   `functions/` tree into one Workers-compatible bundle — this is Cloudflare's own tool,
+   normally used for Pages, but the *output* is a portable Worker module.
+2. `worker/hub-entry.js` and `worker/portal-entry.js` are thin wrappers. Each one strips its
+   own path prefix (`/hub` or `/task`; `/portal`) off the incoming request's URL, then hands
+   the rewritten request to that same compiled bundle:
+
+   ```js
+   import pagesHandler from "../dist/_worker.js/index.js";
+   export default {
+     async fetch(request, env, ctx) {
+       const url = new URL(request.url);
+       if (url.pathname.startsWith("/hub")) url.pathname = url.pathname.slice(4) || "/";
+       return pagesHandler.fetch(new Request(url, request), env, ctx);
+     },
+   };
+   ```
+
+3. The compiled bundle has no idea it's being reached via `/hub` or `/portal` — as far as
+   it's concerned, it's still being asked for `/api/auth/me` at a domain root, same as
+   always.
+
+Why bother reusing instead of rewriting: `functions/_lib/rbac.js`'s per-route authorization
+checks (`isProjectMember`, `isStaffOrAdmin`) already gate every request server-side. Exposing
+the *entire* backend under both `/hub` and `/portal` isn't a wider attack surface than
+exposing it under one path, because a CUSTOMER-role session still gets 403'd on staff-only
+routes no matter which Worker the request arrived through. `CustomerShell.jsx` (the actual
+customer UI, unchanged, now rendered by `portal/`'s own build) documents this same
+defense-in-depth reasoning.
+
+`/crm` is different: its leads/sales/commissions/copilot routes are genuinely new code, so
+they're a real [Hono](https://hono.dev) app (`worker/crm-entry.js`). But `/crm`'s auth and
+static-asset routes *also* fall through to that same compiled `dist/_worker.js` bundle, via
+a catch-all Hono route at the bottom of the file — no reason to duplicate login/signup/me a
+third time.
+
+## Session sharing, for free
+
+All three app Workers set the same cookie: `functions/_lib/session.js`'s `sessionCookie()`
+sets `Path=/`. Because `/hub`, `/portal`, and `/crm` are all on the same host
+(`goldplanner.clubemkt.digital`), a login on any one of them sends that cookie on every subsequent request
+to any of the others — **as long as all three Workers are configured with the same
+`SESSION_SECRET` value** (it's an HMAC key; a mismatch just means tokens signed by one
+Worker fail verification on another, not a crash — but it will look like nobody can ever
+stay logged in). Set it once, copy the exact same value to each Worker.
+
+## Marketing site: Pages, not Workers
+
+We tried migrating `marketing/` onto Workers too, for consistency with the other three.
+It uses `@cloudflare/next-on-pages`, which turns out to be **Pages-specific**: its compiled
+`_worker.js` dynamically imports `__next-on-pages-dist__/functions/*.func.js` modules that
+only `wrangler pages deploy` knows how to discover and attach as extra Worker modules. A
+plain `wrangler deploy` throws `Error: No such module "__next-on-pages-dist__/..."` on every
+dynamic route — caught via a local `wrangler dev` smoke test, before it ever touched
+production.
+
+Real migration would mean swapping to [`@opennextjs/cloudflare`](https://opennext.js.org/cloudflare)
+(Cloudflare's current recommended adapter for Next.js on Workers) — a different build
+pipeline, different output shape, real regression risk for a benefit we don't actually need:
+Workers Routes on `/hub`, `/portal`, `/crm` already take priority over the Pages-hosted
+marketing site on the same zone, proven repeatedly. **Only revisit this if Cloudflare
+deprecates Pages outright.**
+
+## `/v2` — homepage redesign preview
+
+`PRD-HOMEPAGE-REDESIGN.md` proposes replacing the production homepage with the "Sistema
+Mineral" brand system documented at `/brand`. `/v2` (`marketing/app/v2/route.ts`) is where
+that candidate gets reviewed live at `goldplanner.clubemkt.digital/v2` without touching the production
+homepage — same non-destructive-preview pattern `/brand` already established.
+
+The source is a Three.js single-page export (a separate design tool's output, originally
+packaged as a standalone `goldplanner-templo` Cloudflare Worker deploy zip, never actually
+deployed as its own Worker) imported wholesale as a Next.js **edge route**
+(`export const runtime = "edge"`, a `GET` returning `new Response(HTML, ...)`), not a normal
+`page.tsx` — same reasoning as `/brand`: the content is a self-contained static document with
+its own scroll-driven WebGL boot sequence, not a React component tree.
+
+Two gotchas from the import, worth knowing before touching this file again:
+- **Escaping.** The full inlined Three.js bundle and page script had to sit inside route.ts's
+  own JS template literal — every literal backtick or `${` in the source had to be
+  backslash-escaped (`` ` `` → `` \` ``, `${` → `\${`) or it terminates the outer literal
+  early. Done once via a Python transform when the route was created; if this file is ever
+  regenerated from a fresh export, redo the same transform rather than hand-editing 700KB of
+  minified JS.
+- **Z-fighting read as an "artifact."** The mark's green inline accent slabs sat ~0.5mm proud
+  of the black shaft's front face in `buildMark()` — close enough that it flickered like a
+  rendering bug rather than reading as an intentional trim. Fixed by pushing them ~6mm proud.
+  Same failure mode is worth checking for anywhere else two meshes share a near-identical
+  z-offset in this scene.
+
+Other changes made while reviewing this page (2026-08-20): the preloader's SVG mark was
+rendering at its native 1024×1024 instead of the intended 64×64 (missing a
+`#pre .mk svg{width:100%;height:100%}` rule — the CSS on the container div doesn't constrain
+an `<svg>`'s own `width`/`height` attributes by itself); the chapter rail showed bare Greek
+letters with no visible meaning outside the hover tooltip, swapped for numbered markers;
+several `CAM[]` camera keyframes were re-panned so the 3D mark clears body copy instead of
+sitting behind it; the temporary local placeholder video was swapped for the real Pedro
+Silvestrini video at its public R2 URL (`https://video.goldplanner.clubemkt.digital/videos/pedro-silvestrini-v2.mp4`)
+via a plain `<video src>` (not `next-video` — this isn't a React component); and a `COARSE`
+(`matchMedia('(pointer:coarse)')`) branch trims render cost on touch devices — no MSAA,
+`PCFShadowMap` instead of `PCFSoftShadowMap`, 1024px shadow maps, a lower pixel-ratio cap and
+initial `PERF.scale` — without dropping the WebGL scene entirely, which was the ask
+("keep the premium scene" on mobile). Not visually verified on a real device.
+
+The naos-interior "monumental T" set-piece (end of the interior corridor walk) was replaced
+with `buildWorkstation()` — a stone desk carrying a boxy, Apple-Lisa-proportioned "computer"
+(recessed screen glass, a lower twin-slot fascia echoing floppy bays, a keyboard), built from
+the same mineral material palette (`M.stoneD`/`M.marbleW`/`M.void`) as the rest of the temple.
+The "O futuro pertence a quem constrói hoje" creed carved above the old mark was removed with
+it. Confirmed to build and render without a JS error; the exact camera framing for this one
+object wasn't confirmed by eye this session (the automated browser session couldn't hold a
+stable angle on that specific interior view) — worth a manual look on the live site.
+
+## `/formv2` — parchment-animated qualification form (not `/v2`)
+
+Despite the name, this is unrelated to the `/v2` homepage-redesign preview above — different
+naming collision, kept as-is per how the page was requested. `marketing/app/formv2/page.tsx`
+is a full clone of the production homepage (`app/page.tsx`, same Hero/Agitacao/.../Footer
+composition, so the hero's `#qualificacao` scroll-intercept keeps working unchanged) with one
+swap: `QualificacaoSectionV2` (`marketing/components/formv2/`) replaces the production
+`QualificacaoSection`. Every scene of the flow (a condensed cover beat, the gate question,
+each of the 9 qualification questions, and the result screens) is wrapped in `ParchmentStage`,
+which rolls the outgoing scene shut and the incoming one open as a full-viewport "parchment" —
+pure CSS `clip-path` + Framer Motion, so it works on any device. A real three.js layer
+(`lib/three/parchment-ambience.js` — drifting dust + a soft pulsing glow) mounts behind the
+parchment only on devices that pass `lib/device-tier.ts`'s capability check (WebGL support,
+not `prefers-reduced-motion`, and not a touch+small-viewport+low-core/memory combo read as a
+budget phone) — everywhere else just gets the CSS roll with no extra canvas.
+
+Built as a new, isolated route rather than editing production `/` or `/v2`, both of which are
+untouched. Deployed live at `goldplanner.clubemkt.digital/formv2`.
+
+**Section spacing and FAQ position are shared with production `/`.** `AgitacaoSection`,
+`ProcessoSection`, `ObjetivoSection`, `QualificacaoFitSection`, `AutoridadeSection`, and
+`HubGoldPlannerSection` are the same component files on both `app/page.tsx` and `app/formv2/
+page.tsx`, so tightening their `py-*` boundary padding (each seam went from `py-16 sm:py-24` on
+both sides to `pt/pb-12 sm:pt/pb-16`, matching the asymmetric pattern `AgitacaoSection`/
+`ProcessoSection` already used) to cut scroll friction toward the form applies to both pages at
+once. `FaqSection` moved from mid-flow (before `HubGoldPlannerSection`) to after the form
+(`QualificacaoSection`/`QualificacaoSectionV2`), now the last content section before `Footer` on
+both pages.
+
+**A real bug was caught and fixed during testing**: `ParchmentStage`'s content-sync effect
+originally depended only on `[stageKey]`, so a same-scene re-render (typing into the name/
+email/phone fields, picking a goal checkbox) never propagated the fresh `children` into what
+was displayed — the visible inputs froze at their initial empty render and the "Iniciar
+processo de qualificação" button stayed permanently disabled. Fixed by adding a second effect
+that syncs displayed content live whenever `stageKey === displayKey` (i.e. not mid-transition);
+the transition effect only fires the roll animation on an actual key change. Verified by typing
+through and submitting the full 9-question flow end to end after the fix.
+
+## Data model (D1: `hub-goldplanner`)
+
+One database, `migrations/` in numbered order. Grouped by when each module shipped:
+
+| Tables | Module |
+|---|---|
+| `users` | Shared across everything — `access_role` (ADMIN/STAFF/CUSTOMER) gates hub vs. portal, `crm_role` (partner/closer/admin, nullable) gates `/crm` |
+| `projects`, `project_users` | Post-sale delivery — `project_users` doubles as the CUSTOMER invitation record |
+| `tasks` | Kanban board (shared by `/hub`'s board and `/portal`'s progress meter) |
+| `project_finances` | Internal budget/cost tracking, STAFF/ADMIN only |
+| `contracts`, `invoices` | Commercial module — click-to-sign contracts, manual invoices |
+| `addons_catalog`, `project_addons` | Add-on marketplace |
+| `workflow_templates` | Admin-authored task checklists, bulk-applied to a project — reused by CRM's won-lead automation |
+| `cost_categories`, `costs` | Internal cost ledger |
+| `leads`, `lead_events`, `sales`, `commissions` | **CRM** — pipeline + audit trail + sales + a single-beneficiary commission ledger (Hudson, 10%/sale — no affiliates yet, schema stays extensible). `leads.qualification`/`score`/`tier` (migration `0012`) hold the landing-page qualification form's raw answers and computed hot/warm/cold tier, kept separate from the freeform `notes` field a closer edits by hand. |
+| `kb_documents`, `lead_questions` | **CRM knowledge base** — the Business Specialist Copilot's grounding material + interaction log |
+| `blog_pillars`, `blog_posts` | **Blog** — AI-drafted (Claude for copy, Workers AI `flux-1-schnell` for the cover), admin-curated before anything publishes. `POST /api/blog/admin/generate` runs every active pillar and only fails loudly (502) if *all* of them error — one bad pillar no longer silently looks like success. |
+| `builder_documents`, `builder_funnel_steps`, `builder_submissions` | **Block builder** (migrations `0021`/`0022`) — page/form/quiz/funnel documents, a funnel's ordered step references, and form/quiz submissions. See "The block builder" below. |
+| `dev_project_logs`, `dev_project_log_tasks` | **Dev Project Logs** (migration `0026`) — a Hudson-only changelog feed for internal side projects, keyed by `kanban:clients` ids, not `projects`. See "Dev Project Logs" below. |
+
+## The CRM
+
+Modeled on a legal-consultancy CRM built for a sister product (`codigo-internacional`),
+re-personaed for Gold Planner's own business. The `goldplanner-crm` Worker (`worker/crm-entry.js`)
+still owns every `/crm/api/*` route, but there's no standalone `/crm` frontend anymore — a
+direct page visit 302s to `/hub`. Dashboard/Pipeline/Vendas live inside the Hub app as
+`CrmPanel` (`src/crm/CrmPanel.jsx`), and the WhatsApp/URL link manager as its own top-level
+Hub panel, `CrmWaLinks` — both wired into `src/App.jsx`'s `view` switch and
+`src/components/AppSidebar.jsx`'s `NAV_ITEMS`, gated on `crmRole` (see "Full-screen views,
+not modal popups" below). `src/crm/crmApi.js`'s request base is hardcoded to `/crm` (not
+derived from `import.meta.env.BASE_URL` like `src/lib/api.js`) precisely because it's now
+imported from the Hub bundle (`base: "/hub/"`) as well as the CRM Worker's own API — the
+Hono routes only ever exist at `/crm/api/*` regardless of which page issued the fetch.
+
+Visually, the CRM uses the exact same light Ivory Clay/Mineral Black design system as the
+rest of the app — an earlier pass gave it its own dark "Mineral" theme
+(`src/crm/crm-theme.css`, since deleted) modeled on `codigo-internacional`'s own CRM, but
+that was a deviation from the rest of Gold Planner's product surface (Hub/Portal/marketing are
+all light-themed, `#EFE8DC` theme-color), not something to bind to — removed entirely rather
+than kept as an option.
+
+**Pipeline**: `leads.status` moves `new → contacted → qualified → won/lost` (`incomplete`
+covers abandoned captures) via a Kanban board (`src/crm/CrmLeads.jsx` — 5 lanes, native HTML5
+drag-and-drop, search/filter panel, quick-add modal). Every mutation logs a `lead_events` row.
+`qualified` is reached by manual closer action (dragging the card, or the generic
+`PATCH /crm/api/leads/:id/status`), not automatically from the qualification-form score — see
+"Public lead capture" below for why that changed.
+
+**Analytics dashboard** (`src/crm/CrmDashboard.jsx`, `GET /crm/api/dashboard`) — revenue vs.
+an admin-editable monthly goal (`crm_settings` table, `PUT /crm/api/settings/revenue-goal`,
+admin-only), a KPI strip (conversion %, win rate, leads/30d, pending commissions), a
+funnel-by-stage bar chart, a leads-by-source donut, a closer leaderboard, an expandable
+temperature (hot/warm/cold) board, and a link-in-bio funnel card (2026-08-20) comparing clicks
+on the `sbio` `wa_links` short link against form entries (leads with `qualification` set), with
+a click→form conversion % — all hand-rolled SVG, no chart-library dependency, consistent with
+the rest of this codebase's from-scratch chart components.
+
+**WhatsApp/URL link manager** (`src/crm/CrmWaLinks.jsx`, `wa_links`/`wa_numbers` tables,
+`worker/lib/waLinksService.js`) — short links redirect through a small dedicated Worker
+(`worker-links/`, `go.goldplanner.clubemkt.digital`) that reads `hub-goldplanner` D1 directly and increments a
+click counter on every hit.
+
+**Won-lead automation** (`worker/lib/wonAutomation.js`) — fires once, on the transition
+*into* `won`:
+1. Creates a `projects` row + a CUSTOMER `project_users` invite for the lead's email — the
+   hand-off from `/crm` into `/hub`/`/portal`, a same-database write rather than any kind of
+   sync.
+2. Looks for a `workflow_templates` row named exactly **"Onboarding padrão"** and, if found,
+   bulk-applies its tasks into the new project (reusing the already-built admin
+   workflow-template feature — no new mechanism). If none exists yet, logs
+   `onboarding_skipped` instead of failing the whole automation.
+3. Commission generation happens separately, at sale-creation time
+   (`worker/lib/crmDb.js#createCommissionForSale` — 10% of `sales.amount`, beneficiary
+   hardcoded to `hudsonargollo2@gmail.com`).
+
+All three steps were verified end-to-end against a local D1 instance with real seed data
+before this ever touched production — see the PR/commit history for the exact numbers
+(a R$5,000 test sale produced exactly a R$500 commission row).
+
+**Business Specialist Copilot** (`worker/lib/businessSpecialistService.js` +
+`worker/lib/crmKbService.js`) — same pattern as the legal-consultancy reference (locked
+persona + two-tier keyword-overlap KB retrieval, Claude call, fail-open on any error
+including a missing API key), repersona'd as a *digital business specialist* recommending
+Gold Planner's own services. Two modes, same underlying service:
+- **ask** — free-text question about a lead.
+- **suggest** — no question, just the lead's profile; returns recommended directions.
+
+Approving a logged question promotes it into `kb_documents` as a `faq`-tier entry — a
+self-improving loop, same as the reference. **The knowledge base starts empty** — it needs
+Gold Planner's real service catalog, pricing, and case studies seeded before the copilot is
+useful for anything beyond the fail-open placeholder.
+
+**Deleting a lead** (`DELETE /crm/api/leads/:id`, added 2026-08-21) is gated to a single
+hardcoded email (`worker/crm-entry.js`'s `LEAD_DELETE_ALLOWED_EMAIL`, currently
+`hudsonargollo2@gmail.com`) rather than a `crm_role` tier — unlike everything else in this
+section, it's not something a CRM admin promotion should grant, since it hard-deletes the
+lead's entire history (events, sales, and their commissions) with no undo. None of
+`lead_events`/`lead_questions`/`sales`/`commissions` have FK cascades on `lead_id`/`sale_id`,
+so `crmDb.js#deleteLead` walks and deletes each in one `db.batch()` rather than relying on
+the database to clean up. `CrmLeadDetail.jsx` mirrors the same email check to hide the button
+for everyone else — that's UX only, not the real gate; the route enforces it server-side
+regardless of what the client sends.
+
+## Dev Project Logs
+
+A per-project changelog feed for Hudson's internal side projects (quiz-funnel,
+fabrica-de-conteudo, etc.) — `src/components/DevLogsPanel.jsx`, backed by
+`functions/api/dev-logs/[[path]].js` and the `dev_project_logs`/`dev_project_log_tasks`
+tables (migration `0026`). Deliberately **not** the same thing as `projects` above: those
+rows are paying-client, post-sale delivery only (contracts/invoices/a CUSTOMER portal,
+auto-created by `wonAutomation.js` when a CRM lead is marked won) — a side project has none
+of that, so `project_id` here is a `kanban:clients` KV id instead, the same id space the
+Kanban board already groups `tasks` by. No new project-registry table; a project only gets
+a log feed once it exists as a client/project bucket (the existing "Novo projeto" flow,
+`Sidebar.jsx` → `POST /kanban/clients`).
+
+Read is open to any `isStaffOrAdmin` — write (create/edit/delete, and promoting a log entry
+into a real board task via `POST /dev-logs/:id/tasks`) is gated to one hardcoded email,
+`DEV_LOG_ALLOWED_EMAIL = "hudsonargollo2@gmail.com"` — same convention as the CRM's
+`LEAD_DELETE_ALLOWED_EMAIL` above, not a role anyone else gets promoted into. Promoting
+inserts directly into the D1 `tasks` table using the same pattern as `workflow-templates`'s
+apply route and `wonAutomation.js` (`extra: {"source":"dev_log","logId":...}` for
+provenance) — it shows up on the real `Board.jsx` immediately, no separate sync step.
+Never bundled into the customer portal build — `CustomerShell.jsx`/`portal-main.jsx`
+reference none of it, verified with a standalone `build:portal` run.
+
+**Gotcha discovered shipping this (2026-08-23):** `npm run deploy` (this Pages project)
+only serves `tasks.goldplanner.clubemkt.digital` — it does **not** update what's live at
+`goldplanner.clubemkt.digital/hub`, which is what everyone actually means by "the Hub app". That's the
+separate `goldplanner-hub` Worker (`wrangler.worker.toml`), deployed via `npm run deploy:hub`.
+Already called out at the top of `wrangler.toml`; noted again here because it's an easy
+step to skip and the feature would otherwise silently not reach production.
+
+## Public lead capture (`/crm/api/public/leads`)
+
+The landing page's qualification form (`marketing/components/QualificacaoSection.tsx`) is
+the only unauthenticated route on `goldplanner-crm` — visitors aren't logged in, so it can't sit
+behind `requireCrm` like every other `/crm/api/leads*` route. It recomputes the hot/warm/cold
+score **server-side** from the raw answers (`worker/crm-entry.js#scoreQualification`) rather
+than trusting a client-supplied score — the client bundle is public, so a spoofed score would
+otherwise be trivial. An elimination answer (`hasCompany: false`) short-circuits before any
+lead is created; everything else always creates a lead, `status` set to `new` (warm/hot) or
+`incomplete` (cold) so closers can still triage a cold lead without it disappearing.
+
+`status` used to jump straight to `qualified` for every warm/hot submission — fixed
+2026-08-20. A high score meant "worth calling," not "already qualified," and every
+decent-scoring submission was landing in the qualified lane before anyone had actually spoken
+to the lead. `qualified` is now something a closer sets by hand once they've made real
+contact; score/tier still ride along on the row for prioritization (the hot/warm badges),
+just decoupled from the pipeline-stage transition itself.
+
+The approved (hot/warm) result screen's WhatsApp hand-off CTA
+(`marketing/components/QualificacaoSection.tsx`'s `WHATSAPP_URL`) now points at Pedro
+Silvestrini's real number — it shipped for a while as a placeholder (`5565000000000`)
+because no real number existed anywhere in the codebase yet.
+
+Below `lg`, the section's pitch copy (`QualificacaoSection.tsx`'s left column) is two
+tap-advanced scenes instead of one static block — fixed 2026-08-21. `HeroSection.tsx`'s
+`useHeroScene()` intercepts every `a[href="#qualificacao"]` click and `scrollTo`s the section's
+top, and on mobile that top used to be a wall of static pitch text the visitor had to scroll
+past before the form ever appeared — friction between the hero CTA click and actually starting
+the form. Scene 1 (`introScene === 0`) is a `min-h-[80svh]` centered block — headline + first
+paragraph + a "Continuar" CTA — that fills the viewport as its own held beat, mirroring the
+hero's own full-screen CTA moment so landing here after the hero click feels like a
+continuation rather than a jump onto a text block. Tapping it swaps in scene 2 (rationale +
+the numbered steps), which is a normal, non-locked block that sits directly above the form
+card, so scrolling from there flows straight into the gate question. `lg:` and up keeps the
+original static two-column layout (pitch and form already visible side by side there, so
+nothing to split) — the two versions are duplicated JSX (`hidden lg:block` / `lg:hidden`)
+rather than one block with responsive scene logic, to keep the desktop path untouched.
+
+## Per-user timezone preference
+
+`users.timezone` (migration `0019`, nullable) overrides the org default
+(`America/Sao_Paulo`, `src/lib/timezone.js`'s `DEFAULT_TIMEZONE`). Editable from
+`ProfilePage.jsx` via `Intl.supportedValuesOf('timeZone')` for the full picker list;
+`fmtDateTime()`/`fmtDate()` append a human city label (`tzCityLabel()`) rather than showing a
+raw IANA string. Threaded into `CrmLeadDetail`'s event-history timestamps as the first
+consumer — any other timestamp display should call the same helpers rather than
+`toLocaleString()` directly, to stay consistent as more users set a non-default zone.
+
+## Full-screen views, not modal popups (`/hub`)
+
+`AdminPanel`, `FinancePanel`, `CommercialPanel`, `BlogPanel`, `MeetingsPage` (combining the
+single-meeting analyze flow and the admin-only bulk Drive import as tabs), `CrmPanel`,
+`CrmWaLinks`, `PersonalTodoPanel`, and `DevLogsPanel` are full-screen views switched via `App.jsx`'s `view`
+state, not centered modal popups over the board — `src/components/AppSidebar.jsx` is the
+persistent, collapsible nav between them (`hidden lg:flex`; mobile keeps the existing
+bottom-nav + sheet-menu pattern, wired to the same `view` state). The sidebar always opens
+collapsed when `view` becomes `"board"` — more horizontal room for kanban columns —
+regardless of the user's collapse preference elsewhere, but stays independently toggleable
+while there; outside the board it remembers the user's own choice via `localStorage`
+(`tk_app_sidebar_collapsed`).
+
+`CrmPanel` is the one panel with a second, *nested* level of navigation — its own vertical
+inner sidebar (Dashboard/Pipeline/Vendas, desktop-only, falls back to a horizontal tab strip
+on mobile) sits to the right of the Hub's own outer `AppSidebar`, rather than a flat tab
+strip inside the panel body like `CommercialPanel`'s members/contracts/invoices/builders/
+add-ons tabs. No new nav primitive — same `useState(tab) + button row` pattern as every other
+panel's internal tabs, just rendered as a column instead of a row.
+
+**`ReviewPopup` (retired).** Meeting-notes ingest (`functions/api/ingest/[[path]].js`) used to
+surface newly-created tasks via a centered modal (`ReviewPopup`) that auto-opened over the board
+on every load whenever `GET /kanban/reviews` returned a pending batch — a genuine exception to
+the rule above, and one staff found intrusive. `src/components/NotificationsBell.jsx` now folds
+that same per-task edit/dismiss and per-meeting "validar" workflow into a "Tarefas de reuniões"
+section at the top of its dropdown instead (`App.jsx` still owns the `reviews` state/fetch/ack
+functions — `listReviews`/`ackReviews`/`ackOneReview` — and now passes them into the bell rather
+than into a popup). The bell's badge count is `unreadCount + reviewTaskTotal`. `ingest:reviews`
+(KV, 21-day TTL, `seenBy` array) stays the data source — it's still a separate store from the
+bell's own `kanban:notifLog`, just rendered from the same component now.
+
+## Landing-page illustrations and media
+
+Section illustrations (`AgitacaoSection`, `ProcessoSection`, `ObjetivoSection`, the hero) are
+each generated art tied to that section's own copy — not one shared icon reused everywhere —
+composited with `mix-blend-multiply` (light sections) or `mix-blend-screen` (dark sections)
+plus `GoldenRibbons` (an SVG ornamental-linework component, same technique `/login` already
+used) layered on top.
+
+**The edge-fade math is easy to get wrong twice.** `mask-fade-corner` (`app/globals.css`) uses
+`radial-gradient(ellipse closest-side at 50% 50%, black 55%, transparent 100%)` specifically
+because `closest-side` is unambiguous — the gradient's 100% point is defined to land exactly at
+the box's nearest edge. Two earlier attempts used explicit percentage sizing (`ellipse 75% 75%`,
+then `ellipse 50% 50%`) and both were wrong in non-obvious ways: percentage color-stops are
+relative to the gradient's own defined radius, which is *itself* a percentage of the box, so the
+two percentages compound rather than reading as "55% of the way to the edge." Explicit
+percentage sizing for this kind of mask is a trap — use `closest-side`/`closest-corner`/etc.
+keywords instead, always.
+
+**A mask alone isn't sufficient if the image doesn't fill its box.** The illustration `<Image>`
+elements use `object-cover`, not `object-contain` — every source image's aspect ratio differs
+from its container, so `object-contain` left the actual artwork letterboxed well inside the
+mask's fully-opaque zone, completely bypassing the fade regardless of how correct the mask math
+was. If a future illustration still shows a hard edge after checking the mask math, check this
+first: is the image's own rendered content actually reaching the container's edges?
+
+**Hub Gold Planner section is a real video, not a mock.** `marketing/public/video/hub-goldplanner.mp4`
+(1080p, h264, no audio, ~4.7MB — compressed from an 83MB/4K source via `ffmpeg -vf scale=1920:-2
+-crf 26 -an`) plays muted/looped/no-controls, masked at the edges so it reads as page background
+rather than an embedded player. It replaced an earlier 420vh scroll-hijacking sequence that
+hand-animated a mock board component to simulate footage that didn't exist yet at the time.
+
+**Founder photo is temporarily rotating between two candidates.** `AutoridadeSection.tsx`
+alternates `/pedro-silvestrini.jpeg` (current office photo) and `/pedro-silvestrini-old.jpeg`
+(recovered from git history — an earlier commit fully replaced it rather than keeping both)
+every 5 seconds, each with its own tuned `objectPosition` since the two photos have very
+different compositions. This is explicit throwaway code (commented as TEMPORARY in the file) —
+once a decision is made, delete the loser file and the rotation logic, revert to one static
+`<Image>`.
+
+**Site is password-gated while pre-launch.** `marketing/middleware.ts` redirects every route
+(except `/gate` itself and static assets) to a password prompt until `/gate/verify` sets a
+cookie (`tk_preview_auth`, 60-day). Password is hardcoded in
+`app/gate/verify/route.ts` (`quemtemseda`) — deliberately not an env var, since this is a
+spoiler-blocker, not real auth. **Doesn't affect `/hub`, `/portal`, `/crm`** — those are separate
+Workers Routes that intercept requests before they ever reach this Pages Worker. Remove
+`middleware.ts` (and the `app/gate/` tree) once the site is ready to go public.
+
+**Hub Gold Planner video is framed, not blended.** Originally the video was masked at the edges to
+blend into the dark background (see above); that was later reversed to a deliberate "premium
+reveal" treatment — `.frame-gold` (metallic gradient border + glossy diagonal light-sweep
+pseudo-element) and `.vignette-frame` (radial-gradient corner darkening on the video itself),
+both in `app/globals.css`. If asked to touch this again, know that "blends into the page" and
+"glossy premium frame" are two different, previously-tried directions — check which one is
+currently live in `HubGoldPlannerSection.tsx` before assuming.
+
+**Real Gemini image generation works, but not the obvious way.** A third-party Claude Code skill
+(`nano-banana`, installed via `npx skillfish add`) targets an OpenAI-compatible `chat.completions`
+surface — Google's actual Gemini API rejects that request shape outright (`Unknown name "seed"`,
+`Unknown name "response_modalities"`). The fix: call Gemini's **native** REST endpoint directly
+(`POST https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent`, header
+`x-goog-api-key`, body `{contents:[{parts:[{text: prompt}]}], generationConfig:
+{responseModalities:["IMAGE"]}}`) — same shape already proven in the sibling `fabrica-de-conteudo`
+project's `worker/src/services/geminiMediaService.js` (model `gemini-3.1-flash-image`, aka "Nano
+Banana 2"). **The API returns flat JPEG with no alpha channel even when the prompt asks for a
+"transparent background"** — the model draws a literal checkerboard pattern into the pixels
+instead. Working recipe: prompt for a **solid white background** explicitly, then flood-fill
+from the image's four corners (PIL `ImageDraw.floodfill`, matching a near-white starting pixel)
+into a transparent PNG locally — a global color-distance threshold would wrongly punch holes in
+any white highlight linework *inside* the illustration, so it has to be a corner-flood, not a
+blanket color-key. `ai.goldplanner.clubemkt.digital` (a Groq-backed OpenAI-compatible proxy on the user's VPS)
+is text-only — not usable for this.
+
+**A full flat-color Greek illustration pass was built, then explicitly reverted.**
+Commit `76ee301` replaced `SectionBlob`'s plain blurred gradient with a two-layer treatment (soft
+color wash + a crisp flat-color classical bust silhouette on top) and swapped Agitação's
+CSS-patched sepia grid for a real transparent-PNG bust; commit `6ee517f` (`git revert 76ee301`)
+undid all of it after the user reviewed it live and didn't like the direction. **Don't
+re-attempt this exact treatment without new direction from the user** — the generation pipeline
+that made it possible (previous paragraph) is sound and reusable, but the specific "flat-color
+bust replacing the blob" design was tried and rejected, not abandoned for a technical reason.
+
+**Logo geometry/color must be measured against the brand guide, not eyeballed.** Two rounds
+of "fix the logo" feedback were wrong before landing on the right values — round 1 brightened
+the `ivory` variant's panel color, assuming a dark core needed to be lighter to read on dark
+backgrounds (wrong direction: the brand's actual intent is a true-black core inside a sand
+frame, and the frame alone gives contrast — but only against a *flat* dark background, not a
+busy photographic one, see below); round 2 widened proportions based on a pixel measurement
+of the brand-guide PDF that was contaminated by nearby caption text and grid lines. The
+methodology that finally held up: rasterize the PDF page at `pdftoppm -r 400`, crop to
+isolate just the mark (no surrounding text/grid), classify each pixel by nearest-color
+distance to a small palette of known brand hex values (not a fixed-tolerance threshold, which
+gets fooled by anti-aliasing), and verify across 5+ rows before trusting a measurement.
+`marketing/components/Logo.tsx` and `src/components/LogoMark.jsx` (the Hub's own copy) must
+be kept in sync by hand — no shared import between the two bundles.
+
+**A light frame gives silhouette contrast against a flat background, not a busy one.** The
+homepage hero's photographic background defeated the sand-frame-around-black-core logo even
+though the same colors read correctly against the brand guide's flat reference — fixed by
+reusing the `onBlack` variant's dark-beige core color for `ivory` too, so the core itself
+carries value contrast instead of relying entirely on the frame.
+
+**Footer social icons are hand-drawn SVG, not from lucide-react.** `lucide-react` (this repo's
+icon library everywhere else) dropped all brand/logo glyphs in a past major version for
+trademark reasons — no `Instagram`/`Linkedin`/`Github`/etc. exports exist in the installed
+version. `marketing/components/Footer.tsx` defines two small local `<svg>` components
+(`InstagramIcon`, `LinkedinIcon`) built from basic shapes (`rect`/`circle`/`path`,
+`currentColor` stroke) instead — monochrome, matches the weight of the existing `Mail` icon.
+
+## Builder profile — gamification (`/hub`)
+
+Task moves/reviews on the kanban board log to `task_events` (append-only), which drives a
+per-builder XP/level engine (`functions/_lib/gamification.js`) wired into
+`functions/api/kanban/[[path]].js`'s existing review endpoints — no new UI surface for staff to
+learn, XP is just a side effect of doing the work they already do.
+
+- **Two independent accumulators per builder**: a global profile (`builder_profiles`) and one row
+  per project (`builder_project_profiles`) — the project-scoped one exists specifically so a
+  project's page can show "this builder's standing on *this* project," separate from their
+  overall level.
+- **XP formula** (schema/rationale documented inline in `migrations/0013_hub_builder_profile.sql`
+  and `gamification.js`): +20 base per reviewed task, +10 if on time (`reviewed_at` ≤
+  `due_date`), +10 (or +5) for cycle speed measured from `task_events` (first `inprogress` entry
+  → review) — real speed data, not just a same-day due-date check, since `tasks` itself has no
+  `completed_at`/estimate column. Level thresholds: cumulative XP for level *L* = `50*(L-1)*L`.
+- **12-card stoic + biblical wisdom deck** (`skill_cards`, seeded in the migration), one card per
+  level 1–12, unlocked into `builder_cards` on level-up — both a global unlock and, separately, a
+  per-project unlock against `builder_project_profiles.level`. Levels beyond 12 still accrue XP
+  normally; there's just no new card yet — a deliberate v1 content ceiling.
+- **Visibility**: private + admin. A builder reads only their own profile
+  (`GET /api/gamification/me`); `access_role='ADMIN'` can read anyone's
+  (`GET /api/gamification/user/:email`); a project roster is visible to STAFF/ADMIN or that
+  project's members (`GET /api/gamification/project/:projectId`). No public leaderboard in v1.
+- **Both new DB write paths fail open.** `logTaskEvent` and `awardXpForReviewedTask` are wrapped
+  in try/catch that only `console.error`s — a missing migration or any gamification bug can
+  never break the actual kanban move/review action they're layered onto. Verified locally
+  end-to-end (real D1, no mocks) before shipping: 40 XP for an on-time+fast review, reopen+re-
+  review correctly awards zero additional XP, level-up unlocks the right card.
+- **Deferred**: tasks reviewed for the first time after this shipped have no `inprogress`
+  `task_events` row to measure speed from (self-resolves as new events accumulate); multi-
+  assignee tasks award full XP to *every* assignee, not split (a deliberate "small team, generous
+  scoring" call — revisit if it gets gamed); the ADMIN-gated `/user/:email` route mirrors the
+  tested `/project/:id` gate logic but wasn't itself exercised against a second real ADMIN user.
+
+## The block builder (`/hub`'s Blog panel → Páginas/Formulários/Quizzes/Funis)
+
+A block-based page/form/quiz/funnel builder, added as new tabs inside `BlogPanel.jsx`
+(Posts is now one tab among five, not the whole panel). One shared concept underlies all
+four: a **Document** (`builder_documents`, migration `0021`) is `{kind: page|form|quiz|
+funnel, slug, title, status, blocks: JSON[], meta: JSON}` — `blocks` is an ordered array of
+`{id, type, props}`, and every block type is a plain JS module (`src/builder/blocks/*.jsx`)
+exporting `{key, label, category, schema, defaultProps, Render}`. `Render` is the one
+component used both in the builder's live canvas (`src/builder/BlockRenderer.jsx`) and —
+via a separate `.tsx` port — at publish time in `marketing/`, so the editor preview and the
+shipped page can't structurally drift apart.
+
+9 v1 block types: `hero`, `richtext`, `feature_grid`, `testimonial`, `pricing`, `cta_band`,
+`form_field`, `quiz_question`, `image`. `DocumentBuilder.jsx` restricts which blocks are
+offered per document kind (`ALLOWED_BLOCKS_BY_KIND` in `registry.js`) — a `page` gets the
+landing-page set, `form`/`quiz` only get their own input block plus `richtext`/`image` for
+intro copy.
+
+**Property panel is schema-driven, not per-block custom code.** `PropertyPanel.jsx` renders
+text/textarea/url/image/number/boolean/select/list/array fields generically from each
+block's `schema` array — only `richtext` gets a bespoke editor (see "Removing Milkdown"
+below), since a single free-text field doesn't fit the generic form-field model anyway.
+**Autosave is debounced (500ms), not fired per keystroke** — an earlier undebounced version
+let PATCH responses race and arrive out of order, silently truncating typed text mid-word
+(caught live while testing, not guessed); `DocumentBuilder.jsx`/`FunnelBuilder.jsx` both
+flush the pending save before publish/close so neither action can act on stale state.
+
+**"Paste AI JSON" import**, ported from a BoltStack demo Hudson watched (not their code,
+just the pattern): a "copiar prompt" button serializes the block's schema into a prompt
+asking for matching JSON, "colar resposta" parses a pasted reply and applies it — zero
+server-side AI cost, the user's own Claude/ChatGPT session does the generation.
+
+**Marketing renders three separate public route families** (`.tsx` ports of the same 9
+blocks, in `marketing/components/blocks/`, using `ivory`/`ink`/`green` tokens instead of
+the Hub's `clay`/`ink`/`action` names — same colors, can't share an import across the two
+separate Vite/Next build pipelines):
+- **`/p/:slug`** — a published `page` document, static `BlockRenderer`.
+- **`/f/:slug`** — a published `form`/`quiz` document, rendered as a one-question-per-step
+  wizard (`FormWizard.tsx`, client component) rather than stacked — `GET
+  /api/builder/public/:slug` is kind-agnostic (`kind IN ('form','quiz')`) since the route
+  itself doesn't know which one it's loading ahead of time. Submitting POSTs to
+  `/api/builder/public/:slug/submit`; a quiz's score is **always recomputed server-side**
+  from each question's `scoreWeight` (never trust a client-supplied score — same principle
+  the CRM qualification form already established) and matched against an optional
+  `meta.scoringRules.tiers` list to produce a tier. Both kinds insert into
+  `builder_submissions` (migration `0022`) — an admin `GET .../submissions` endpoint exists
+  to read them back, but there's no viewer UI for it yet (see outstanding items).
+- **`/n/:slug`** — a published `funnel` document. A funnel has no `blocks` of its own — it's
+  an ordered reference to other page/form/quiz documents (`builder_funnel_steps`, migration
+  `0021`), each step optionally branching on a quiz's tier (`next_rule: {default, branches:
+  [{tier, goto}]}`). `FunnelStep.tsx` resolves branching client-side (the rule + submission
+  result are both already in hand) and navigates via `?step=N` in the URL — a page step gets
+  a "continuar" button, a form/quiz step's `FormWizard` takes an `onSubmitted` callback
+  instead of showing its own thank-you screen, since the funnel decides what happens next.
+  Verified live end-to-end against a real quiz→branch→outcome-page funnel (both the hot and
+  cold paths) before this note was written.
+
+**Removing Milkdown.** The Posts tab's editor used to be `@milkdown/{crepe,kit,react}`
+(ProseMirror-based rich text) — removed entirely (198 packages, ~1.5MB off the Hub's main JS
+bundle) because it and `MarkdownBody` (the actual publish-time renderer) were two
+independent markdown pipelines that could silently drift — something Milkdown rendered fine
+that `MarkdownBody` choked on, or vice versa, with no structural guarantee either way. Split
+into `MarkdownTextarea.jsx` (plain textarea + a thin insert-snippet-at-cursor toolbar,
+exposes `insertImage(key, alt)` via ref — same shape Milkdown exposed, so the "gerar imagem"
+AI-insert flow needed no changes) and `RichtextEditor.jsx` (adds editar/preview tabs on top,
+used by the block builder's own `richtext` block). `BlogPanel.jsx`'s Posts tab uses
+`MarkdownTextarea` directly rather than `RichtextEditor`, since it already owns its own
+outer editar/preview tab pair — nesting `RichtextEditor`'s tabs inside would double them up.
+
+## Meeting Intelligence Drive search
+
+`automation/meeting-notes-sync.gs` is the source-of-truth copy of a Google Apps Script Web App
+that `functions/api/meetings/[[path]].js` proxies to (`MEETINGS_WEBAPP_URL`) — **editing the
+`.gs` file in this repo does nothing live**; changes must be manually pasted into the Apps
+Script editor (script.google.com) and redeployed as a new Web App version. `findNotesDocs()`
+now merges two sources: the original Drive-wide title search (`NAME_CONTAINS`, default
+`"Anotações"`) plus every Google Doc directly inside any folder named in
+`CONFIG.EXTRA_FOLDER_NAMES` (currently `["REGISTROS DE REUNIÕES"]`, resolved by name via
+`DriveApp.getFoldersByName()` — no folder ID to hardcode). Not yet confirmed live: whether a
+folder with that exact name is actually visible to whichever Google account runs the script —
+`getFoldersByName` fails silently (zero extra results, no error) on a name mismatch.
+
+## Non-obvious gotchas (all discovered by testing, not guessed)
+
+| Gotcha | Why it matters |
+|---|---|
+| Vite `base` must equal the path prefix (`/hub/`, `/portal/`) | Otherwise the built HTML's asset links and `import.meta.env.BASE_URL`-derived API calls (`src/lib/api.js`) point at the domain root, which no route owns. `src/crm/crmApi.js` is the one exception — it's imported from both the Hub bundle (base `/hub/`) and the standalone CRM Worker's API, so its base URL is hardcoded to `/crm` instead of derived from `BASE_URL` (see CRM section below). |
+| `run_worker_first = true` in each `wrangler.*.toml`'s `[assets]` | Without it, Workers' static-asset layer (with SPA fallback on) intercepts *every* request — including `/hub/api/*` — before the Worker code ever runs, silently returning the SPA's `index.html` instead of JSON. |
+| `.assetsignore` (containing `_worker.js`) must live in `public/`, not `dist/` | `dist/` is regenerated every build (gitignored); `public/` is the only place a file survives a rebuild and still gets copied into the output. Without it, the compiled backend bundle gets uploaded as a public, downloadable static file. |
+| Built entry HTML gets renamed to `index.html` post-build | Vite outputs `portal.html` (matching the source filename); Workers' SPA fallback looks specifically for a file *named* `index.html`. See the `build:portal` npm script. |
+| `next-on-pages` ≠ portable to plain `wrangler deploy` | See "Marketing site: Pages, not Workers" above. |
+| **A Worker `fetch()`ing another Worker on its own zone can get misrouted back into itself** | `marketing/app/{p,f,n,blog}/**` server components used `fetch("https://goldplanner.clubemkt.digital/hub/...")` to call the Hub API — despite `goldplanner.clubemkt.digital/hub/*` being a more-specific Workers Route than the marketing Pages project's zone-wide catch-all, the *subrequest* resolved back into the marketing Worker's own fetch handler instead of `goldplanner-hub`, returning the marketing site's own 404 HTML as if it were the Hub's JSON response. External requests to the same URL (`curl`, a real browser) route correctly — only a Worker calling out to its *own* zone hit this. Fixed with a Cloudflare **service binding** (`marketing/wrangler.toml`'s `[[services]] binding = "HUB", service = "goldplanner-hub"`, accessed via `getRequestContext().env.HUB.fetch(...)` from `@cloudflare/next-on-pages`) instead of a same-zone HTTP fetch — bypasses zone routing entirely, calls the target Worker's handler directly. Any *new* marketing server component that needs Hub data must use `env.HUB.fetch`, never a bare `fetch()` to `goldplanner.clubemkt.digital/hub/...`. Client-side (`FormWizard.tsx`'s submit) is unaffected — a real browser request, not a Worker subrequest. |
+
+## Deploying
+
+Each surface deploys independently. The CRM no longer has its own frontend — Dashboard/
+Pipeline/Vendas/Links live inside the Hub app as panels (`src/crm/CrmPanel.jsx`,
+`src/crm/CrmWaLinks.jsx`); the `goldplanner-crm` Worker only serves `/crm/api/*` now (a direct
+page visit to `/crm` 302s to `/hub`), so it deploys with no separate build step and no
+`[assets]` binding.
+
+```sh
+# Marketing (from marketing/)
+cd marketing && npm run pages:deploy
+
+# Hub (from repo root)
+npm run build && npx wrangler pages functions build --outdir=./dist/_worker.js/
+npx wrangler deploy --config wrangler.worker.toml
+
+# Portal (from repo root)
+npm run build:portal
+npx wrangler pages functions build --outdir=./dist/_worker.js/   # shared backend, same step
+npx wrangler deploy --config wrangler.portal.toml
+
+# CRM API (from repo root) — no frontend build, see note above
+npx wrangler pages functions build --outdir=./dist/_worker.js/   # shared backend, same step
+npx wrangler deploy --config wrangler.crm.toml
+```
+
+Marketing also auto-deploys on push to `main` via `.github/workflows/deploy-marketing.yml`
+(path-filtered to `marketing/**` so hub/portal/crm commits don't trigger it). Hub/portal/crm
+are manual-only for now — no CI wired up yet.
+
+### Database migrations
+
+```sh
+npx wrangler d1 migrations apply hub-goldplanner --remote
+```
+
+Add new schema as a new numbered file in `migrations/` — never edit an already-applied one.
+
+## Secrets checklist
+
+Each Worker holds its own copy of secrets (Cloudflare doesn't share them across Workers
+automatically, even when they share a D1/KV binding). Set with:
+
+```sh
+npx wrangler secret put NAME --config wrangler.<worker>.toml
+```
+
+| Secret | `goldplanner-hub` | `goldplanner-portal` | `goldplanner-crm` | Used for |
+|---|---|---|---|---|
+| `SESSION_SECRET` | ✅ | ✅ (must match hub exactly) | ✅ (must match hub exactly) | Session cookie signing — nothing works without it |
+| `ANTHROPIC_API_KEY` | ✅ | — | ✅ | Meeting intelligence (hub) / Business Specialist Copilot (crm) |
+| `INGEST_TOKEN` | ✅ | — | — | Apps Script → `/api/analyze/auto`, `/api/ingest/*` |
+| `MEETINGS_WEBAPP_TOKEN` | ✅ | — | — | Outbound call to the Drive Apps Script Web App |
+| `MEETINGS_WEBAPP_URL` | ✅ | — | — | Same |
+| `RESEND_API_KEY` | ✅ | — | — | @mention email notifications |
+
+`APP_PASSWORD` (an old Pages secret) is confirmed unused anywhere in the codebase — don't
+bother setting it.
+
+`goldplanner-portal` only touches auth + projects/contracts/invoices/addons routes, so
+`SESSION_SECRET` is its one real requirement — verified by tracing every `env.<SECRET>`
+reference against the routes portal can actually reach.
+
+## Known outstanding items (content/ops, not architecture)
+
+1. **Secrets** — `goldplanner-hub` has all six set (`SESSION_SECRET`, `ANTHROPIC_API_KEY`,
+   `INGEST_TOKEN`, `MEETINGS_WEBAPP_TOKEN`, `MEETINGS_WEBAPP_URL`, `RESEND_API_KEY`).
+   `goldplanner-portal`/`goldplanner-crm`'s own secrets haven't been re-verified since — confirm
+   `SESSION_SECRET` matches hub exactly before assuming cross-path login still works if either
+   Worker's secrets are ever rotated.
+2. **`tasks.goldplanner.clubemkt.digital` → `/hub` redirect** — the old standalone Pages deployment there
+   still works on its own; nothing forwards it to the new path yet.
+3. ~~**`NOTIFY_FROM` on the live `tasks.goldplanner.clubemkt.digital` Pages project**~~ — done (2026-08-15):
+   `env.NOTIFY_FROM` was unset in production (`wrangler pages secret list --project-name=goldplanner-app`
+   confirmed it wasn't there, and `wrangler.toml`'s `[vars]` block — where the correct value
+   already lived — is a Workers-only construct `wrangler pages deploy` never reads), so
+   `functions/api/kanban/[[path]].js:243`'s fallback (`"GOLD PLANNER <notificacoes@goldplanner.clubemkt.digital>"`,
+   the unverified address) was firing on every @mention email. Fixed with
+   `wrangler pages secret put NOTIFY_FROM --project-name=goldplanner-app` (same effect as the
+   dashboard Settings → Variables path, no redeploy needed since Pages secrets are injected at
+   request time, not baked into `dist/`) — now set to `GOLD PLANNER <notificacoes@send.goldplanner.clubemkt.digital>`,
+   matching the already-correct Worker configs. Not live-tested with a real @mention (would send
+   an actual email) — verified by confirming the secret exists and reading the fallback logic.
+4. **CRM content** — ~~author a `workflow_templates` row named exactly "Onboarding padrão"~~
+   done (2026-08-15): a generic 6-step checklist (kickoff → access collection → content
+   collection → build → review → launch), created via the AdminPanel templates API, id
+   `8f8e1f3580fe` — this is the fallback the adaptive onboarding feature (see
+   `~/.claude/plans/goldplanner-adaptive-onboarding.md`) applies when a won lead has no
+   `project_type`/brief signal. Still open: seed `kb_documents` with Gold Planner's real service
+   catalog/pricing/case studies.
+5. **`crm_role` grants** — `hudsonargollo2@gmail.com` has
+   `admin`. Nobody else has a grant yet. No admin UI for this (low
+   volume, not worth building yet) — grant via direct D1 write:
+   ```sh
+   npx wrangler d1 execute hub-goldplanner --remote --command \
+     "UPDATE users SET crm_role = 'admin' WHERE email = 'someone@goldplanner.clubemkt.digital'"
+   ```
+6. **Blog content pipeline** — generation confirmed working end-to-end (4 real drafts sitting
+   in `pending_review` as of this writing); still needs an ADMIN to actually review/publish
+   them, and the homepage has no "latest posts" section yet (only `/blog` itself lists them).
+7. **Stripe** — the official `mcp.stripe.com` remote MCP server is registered
+   (`claude mcp add --transport http stripe https://mcp.stripe.com`) and authenticated
+   (`claude mcp login stripe`, run by Hudson from his own account). Its tools aren't callable
+   yet in any session that was already running when the server was added/authenticated — the
+   CLI only picks up MCP config changes on a fresh session start, confirmed via `claude mcp get
+   stripe` returning "no such server" inside an already-running session even though `claude mcp
+   list` shows it connected. **Next step: start a new Claude Code session, verify the Stripe
+   tools load, then build.** Scope is decided — **both**:
+   - **Portal add-on purchases** — `addons_catalog`/`project_addons` (migration
+     `0006_hub_marketplace.sql`) already model the catalog; needs real Stripe Checkout wired to
+     an actual purchase flow in `/portal`.
+   - **Contract/invoice payments** — `contracts`/`invoices` (migration
+     `0005_hub_commercial.sql`) are currently manual records with no online payment path; needs
+     Stripe wired so a customer can actually pay an invoice rather than it just being a number
+     staff track by hand.
+   
+   Explicitly deferred for now: CRM sale checkout (recording a sale in `/crm` when a lead is
+   won stays a manual amount entry, not a real payment flow).
+8. **Founder photo decision** — pick office photo vs. Acropolis photo, then delete
+   `AutoridadeSection.tsx`'s temporary 5s rotation and the losing file (see "Landing-page
+   illustrations and media" above).
+9. **Two curated blog posts, pasted content but not yet built** — Hudson supplied full copy for
+   two specific posts ("Você realmente precisa esperar 12 meses..." and a Pedro-origin-story
+   piece) to hardcode + illustrate directly rather than run through the AI drafting pipeline;
+   blocked because the paste got truncated mid-transit (154 lines missing) before this was
+   acted on. Needs the full text resupplied (as a file, not a chat paste) before this can move.
+   `statue-blueprint.jpg`-style illustration (see "A full flat-color Greek illustration pass"
+   above) could be a good fit here even though it wasn't used on the homepage.
+10. **Meeting Drive search change needs a manual redeploy** — `automation/meeting-notes-sync.gs`
+    was updated to also search a "REGISTROS DE REUNIÕES" folder, but this only takes effect once
+    someone pastes it into the Apps Script editor and redeploys the Web App, then confirms via a
+    manual `syncMeetingNotes` run that the folder is actually found (see "Meeting Intelligence
+    Drive search" above).
+11. **Password gate is live** (`quemtemseda`) — intentional while pre-launch; remove
+    `marketing/middleware.ts` + `app/gate/` before the site should be publicly reachable.
+12. **Block builder has no submissions-viewer UI, and no `meta.scoringRules` editor.**
+    `GET /api/builder/admin/documents/:id/submissions` and a quiz's `meta.scoringRules`
+    (tier thresholds) are both fully supported backend-side but have no Hub UI yet —
+    reading submissions or setting tier rules today means a direct D1 query/PATCH. Build
+    once a real quiz/form is in production use and this stops being acceptable.
+13. **No published page/form/quiz/funnel exists yet** — the whole builder was verified with
+    throwaway test documents (created and deleted via direct D1 writes and the real UI),
+    cleaned up after each check. First real usage will be the first true end-to-end proof
+    in production conditions.
+14. ~~**CRM fixes committed but not deployed**~~ — done (2026-08-20): `d45ae45`/`44bde3c`
+    (stop-auto-qualifying-at-intake, the link-in-bio dashboard widget) are live —
+    `goldplanner-hub` deployed (`693ba205`), `goldplanner-crm` deployed (`3da2f9b9`), both smoke
+    checked 200/302 as expected. New warm/hot leads now land as `status: "new"`; `qualified`
+    is a manual closer action from here on.

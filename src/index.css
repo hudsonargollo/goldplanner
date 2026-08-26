@@ -1,0 +1,166 @@
+@import "tailwindcss";
+
+/* ── GOLD PLANNER v2 · Mineral system ─────────────────────────────────────────────
+   Ancient + tech. Ivory base, mineral black, deep green, sand.
+   Type: Inter (display) · EB Garamond italic (editorial/Latin) · JetBrains Mono (UI)
+   Fonts loaded via <link> in index.html.
+------------------------------------------------------------------------------ */
+
+@theme {
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-serif: "EB Garamond", Georgia, serif;
+
+  /* Mineral palette */
+  --color-clay: #efe8dc; /* Ivory Clay — dominant base */
+  --color-paper: #f8f3ea; /* raised card */
+  --color-ink: #141618; /* Mineral Black — text/structure */
+  --color-green: #2e4a43; /* Mineral Green — primary accent */
+  --color-sand: #c7b79c; /* Mineral Sand — secondary accent */
+
+  /* action = green (so existing bg-action/text-action map to brand green) */
+  --color-action: #2e4a43;
+  --color-pillar: #c7b79c;
+
+  /* Semantic state lexicon (earthy) */
+  --color-success: #3e6b4e;
+  --color-danger: #9b3d2e; /* terracotta */
+  --color-warning: #b8862f; /* ochre */
+}
+
+/* ── Base ───────────────────────────────────────────────────────────────────── */
+html {
+  color-scheme: light;
+}
+body {
+  margin: 0;
+  background: var(--color-clay);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.font-mono,
+.tnum {
+  font-feature-settings: "tnum" 1;
+}
+
+/* Editorial serif helper */
+.serif {
+  font-family: var(--font-serif);
+  font-style: italic;
+}
+
+/* ── Elevation surfaces (light, warm) ───────────────────────────────────────── */
+.surface-1 {
+  /* recessed (column drop zones) */
+  background-color: #e9e1d2;
+  border: 1px solid rgba(20, 22, 24, 0.07);
+}
+.surface-2 {
+  /* raised card */
+  background-color: #f8f3ea;
+  border: 1px solid rgba(20, 22, 24, 0.1);
+  box-shadow: 0 1px 2px rgba(20, 22, 24, 0.04);
+}
+.surface-3 {
+  /* nested control */
+  background-color: #fcf9f2;
+  border: 1px solid rgba(20, 22, 24, 0.1);
+}
+
+.glass {
+  background: rgba(239, 232, 220, 0.78);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(20, 22, 24, 0.08);
+}
+
+/* ── Accent treatments (soft, editorial — no neon glow) ─────────────────────── */
+.ring-action {
+  box-shadow: 0 0 0 1px rgba(46, 74, 67, 0.3), 0 1px 3px rgba(20, 22, 24, 0.08);
+}
+.glow-action {
+  box-shadow: 0 2px 12px rgba(46, 74, 67, 0.2);
+}
+
+/* MSN-nudge-style jolt when someone pings you */
+@keyframes tk-shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+.animate-tk-shake {
+  animation: tk-shake 0.5s ease-in-out;
+}
+
+/* Mono eyebrow / technical label */
+.label-tech {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-green);
+}
+
+/* Icon nested inside a text input */
+.input-ico {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #a8a29e;
+  pointer-events: none;
+}
+
+/* Paper-grain texture overlay (mineral, tactile) */
+.grain-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+}
+
+/* ── Blueprint backdrop (subtle, dark-on-cream) ─────────────────────────────── */
+.bp-dots {
+  background-image: radial-gradient(circle, rgba(20, 22, 24, 0.06) 1px, transparent 1px);
+  background-size: 30px 30px;
+}
+.bp-lines {
+  background-image: linear-gradient(to right, rgba(20, 22, 24, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(20, 22, 24, 0.045) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+/* ── Scrollbars ─────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(20, 22, 24, 0.16);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(46, 74, 67, 0.5);
+}
+::selection {
+  background: rgba(46, 74, 67, 0.18);
+  color: #141618;
+}
+
+/* Date input calendar icon — keep dark on light */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: none;
+  opacity: 0.55;
+  cursor: pointer;
+}
+

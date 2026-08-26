@@ -1,0 +1,82 @@
+// REST client for the CRM Worker — same shape as src/lib/api.js (shared
+// auth routes under /api, CRM-specific routes also under /api since
+// worker/crm-entry.js mounts everything at /crm/api/*).
+//
+// Hardcoded (not derived from import.meta.env.BASE_URL like src/lib/api.js
+// does) because this module is now imported from two different bundles —
+// the standalone CRM app (base "/crm/") AND the Hub app's CrmPanel/CrmWaLinks
+// (base "/hub/") — but the CRM's Hono routes only ever exist at /crm/api/*
+// on the goldplanner-crm Worker, same origin either way, so the request path
+// must stay pinned to /crm regardless of which page issued it.
+const API_BASE = "/crm";
+
+async function req(path, opts = {}) {
+  const res = await fetch(`${API_BASE}/api${path}`, {
+    headers: { "Content-Type": "application/json" },
+    credentials: "same-origin",
+    ...opts,
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  if (!res.ok) {
+    const err = new Error(`API ${res.status}`);
+    err.status = res.status;
+    try {
+      err.body = await res.json();
+    } catch {
+      /* ignore */
+    }
+    throw err;
+  }
+  return res.json();
+}
+
+export const crmApi = {
+  // shared auth (delegated to the same compiled backend as /hub and /portal)
+  me: () => req("/auth/me"),
+  check: (email) => req("/auth/check", { method: "POST", body: { email } }),
+  login: (email, password) => req("/auth/login", { method: "POST", body: { email, password } }),
+  signup: (email, password) => req("/auth/signup", { method: "POST", body: { email, password } }),
+  logout: () => req("/auth/logout", { method: "POST" }),
+
+  // CRM
+  dashboard: () => req("/dashboard"),
+  listLeads: (status) => req(`/leads${status ? `?status=${status}` : ""}`),
+  createLead: (body) => req("/leads", { method: "POST", body }),
+  getLead: (id) => req(`/leads/${id}`),
+  updateLead: (id, body) => req(`/leads/${id}`, { method: "PATCH", body }),
+  deleteLead: (id) => req(`/leads/${id}`, { method: "DELETE" }),
+  setLeadStatus: (id, status, opts = {}) =>
+    req(`/leads/${id}/status`, { method: "PATCH", body: { status, ...opts } }),
+  createSale: (leadId, amount, currency) =>
+    req(`/leads/${leadId}/sales`, { method: "POST", body: { amount, currency } }),
+  listSales: () => req("/sales"),
+
+  // onboarding review queue (Phase 2 — AI-generated plans awaiting approval)
+  listOnboardingPlans: (status) => req(`/onboarding/plans${status ? `?status=${status}` : ""}`),
+  getOnboardingPlan: (id) => req(`/onboarding/plans/${id}`),
+  addOnboardingStep: (planId, body) => req(`/onboarding/plans/${planId}/steps`, { method: "POST", body }),
+  updateOnboardingStep: (planId, stepId, body) =>
+    req(`/onboarding/plans/${planId}/steps/${stepId}`, { method: "PATCH", body }),
+  deleteOnboardingStep: (planId, stepId) =>
+    req(`/onboarding/plans/${planId}/steps/${stepId}`, { method: "DELETE" }),
+  approveOnboardingPlan: (planId) => req(`/onboarding/plans/${planId}/approve`, { method: "POST" }),
+
+  // Business Specialist Copilot
+  askCopilot: (leadId, questionText) => req(`/leads/${leadId}/ask`, { method: "POST", body: { questionText } }),
+  suggestCopilot: (leadId) => req(`/leads/${leadId}/suggest`, { method: "POST" }),
+  listQuestions: (leadId) => req(`/leads/${leadId}/questions`),
+  approveQuestion: (id) => req(`/questions/${id}/approve`, { method: "POST" }),
+
+  // WhatsApp/URL short-link manager
+  listWaLinks: () => req("/wa-links"),
+  createWaLink: (body) => req("/wa-links", { method: "POST", body }),
+  updateWaLink: (slug, body) => req(`/wa-links/${slug}`, { method: "PATCH", body }),
+  deleteWaLink: (slug) => req(`/wa-links/${slug}`, { method: "DELETE" }),
+  listWaNumbers: () => req("/wa-numbers"),
+  createWaNumber: (body) => req("/wa-numbers", { method: "POST", body }),
+  deleteWaNumber: (id) => req(`/wa-numbers/${id}`, { method: "DELETE" }),
+
+  // dashboard settings
+  getRevenueGoal: () => req("/settings/revenue-goal"),
+  setRevenueGoal: (revenueGoal) => req("/settings/revenue-goal", { method: "PUT", body: { revenueGoal } }),
+};

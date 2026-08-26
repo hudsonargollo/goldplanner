@@ -1,0 +1,1420 @@
+/**
+ * GOLD PLANNER Kanban API — Cloudflare Pages Function (KV-backed).
+ * Ported from the growth worker. Bound to the KANBAN KV namespace.
+ *
+ * KV keys:
+ *   kanban:clients   → [{ id, name, color }]
+ *   kanban:cards     → [{ id, columnId, title, description, priority, clientId, assignee, dueDate, order, labelColor, createdAt, reviewed, reviewedAt, reviewedBy }]
+ *   kanban:members   → [{ id, name, email, role }]
+ *   kanban:notifLog  → [{ id, type, to, fromName, fromEmail, cardId, cardTitle, clientId, commentId, text, createdAt, readAt }]
+ *                      persistent per-recipient notification history (mentions, requests, assignments, nudges, reviews, reopens) — never deleted, only readAt-stamped
+ *   push:web         → { [email]: [{ endpoint, expirationTime, keys }, ...] }  (written by functions/api/push/[[path]].js)
+ *   push:expo        → { [email]: [expoPushToken, ...] }                       (written by functions/api/push/[[path]].js)
+ *   kanban:todos:<email> → { templates, items }  private personal daily checklist,
+ *                          one key per user — never visible to anyone else. Bundled by
+ *                          day: `items` are concrete per-date rows
+ *                          [{ id, text, date, done, createdAt, templateId }], `templates`
+ *                          are recurring-task rules
+ *                          [{ id, text, recurrence, weeklyDay, startDate, createdAt }].
+ *                          A GET for a given date lazily materializes (and persists) any
+ *                          due-but-missing recurring instances for that date before
+ *                          returning — see materializeTodos() below. Older accounts had
+ *                          this key as a flat array; migrateTodoStore() upgrades that
+ *                          shape in place on first read.
+ *
+ * Routes (relative to /api/kanban):
+ *   GET|POST          /clients          PUT|DELETE /clients/:id
+ *   GET|POST          /cards            PUT|DELETE /cards/:id
+ *   POST              /cards/:id/review           — mark reviewed, move to Done, notify + broadcast
+ *   POST              /cards/review-bulk          — same, for a batch of ids
+ *   POST              /cards/reorder              — { columnId, orderedIds } re-numbers `order` within a column
+ *   GET|POST          /members          PUT|DELETE /members/:id
+ *   GET                /notifications              — { items, unreadCount } from kanban:notifLog, for the current user
+ *   POST               /notifications/ack           — { ids } or { all: true }, marks readAt. If an
+ *                                                      acked notification references a comment (mention/
+ *                                                      request), also marks that comment seenBy me — unifies
+ *                                                      notification read-state with the seenBy system below.
+ *   GET   /todos?date=YYYY-MM-DD          — one day's items (defaults to today), recurring instances auto-materialized
+ *   POST  /todos                          — { text, date, recurrence?, weeklyDay? } create a one-off or recurring task
+ *   PUT   /todos/:id                      — { text?, done? } edit a single day's instance
+ *   DELETE /todos/:id[?series=1]          — remove one instance, or (series=1) stop the whole recurring series from today on
+ *
+ * A "reviewed" event is recorded as a system comment (kind: "reviewed") on the
+ * card so it stays visible in the card's own thread; it also writes a
+ * kanban:notifLog entry (type "reviewed") for the bell/log.
+ */
+
+import { getSessionEmail } from "../../_lib/session.js";
+import { isAdmin } from "../../_lib/allowlist.js";
+import { loadCards, saveCards } from "../../_lib/tasksStore.js";
+import { buildPushPayload } from "@block65/webcrypto-web-push";
+import { logTaskEvent, resolveAssigneeEmails, awardXpForReviewedTask } from "../../_lib/gamification.js";
+
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type,Authorization",
+};
+
+const REVIEW_TTL_MS = 21 * 24 * 60 * 60 * 1000; // pending reviews expire after 21 days
+
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { "Content-Type": "application/json", ...CORS },
+  });
+}
+
+function uid() {
+  return crypto.randomUUID().replace(/-/g, "").slice(0, 12);
+}
+
+async function kvGet(kv, key, fallback = []) {
+  const raw = await kv.get(key);
+  if (!raw) return fallback;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return fallback;
+  }
+}
+
+const kvSet = (kv, key, value) => kv.put(key, JSON.stringify(value));
+
+const todayISO = () => new Date().toISOString().slice(0, 10);
+
+// Upgrades the pre-recurrence flat-array todo shape (`[{id,text,done,createdAt}]`)
+// to `{ templates: [], items: [] }` in place, bucketing each old item under the
+// date it was created on (falling back to today for anything with no createdAt).
+// Returns the (possibly-upgraded) store; callers persist it only if `migrated`.
+function migrateTodoStore(raw) {
+  if (Array.isArray(raw)) {
+    return {
+      migrated: true,
+      store: {
+        templates: [],
+        items: raw.map((t) => ({
+          ...t,
+          date: (t.createdAt || "").slice(0, 10) || todayISO(),
+          templateId: null,
+        })),
+      },
+    };
+  }
+  return { migrated: false, store: raw && typeof raw === "object" ? raw : { templates: [], items: [] } };
+}
+
+// Does a recurring template fire on this date? "weekly" fires on
+// template.weeklyDay (0=Sun..6=Sat, captured from the date it was created on).
+function templateOccursOn(template, dateISO) {
+  if (dateISO < template.startDate) return false;
+  const dow = new Date(`${dateISO}T00:00:00`).getDay();
+  if (template.recurrence === "daily") return true;
+  if (template.recurrence === "weekdays") return dow >= 1 && dow <= 5;
+  if (template.recurrence === "weekly") return dow === template.weeklyDay;
+  return false;
+}
+
+// Ensures every template due on `dateISO` has a materialized item for that
+// date — called on every GET for a date so recurring tasks "just appear" on
+// future days the first time anyone looks at them, without pre-generating
+// rows for days no one will ever visit.
+function materializeTodos(store, dateISO) {
+  let changed = false;
+  for (const t of store.templates) {
+    if (!templateOccursOn(t, dateISO)) continue;
+    if (store.items.some((i) => i.templateId === t.id && i.date === dateISO)) continue;
+    store.items.push({
+      id: uid(),
+      text: t.text,
+      date: dateISO,
+      done: false,
+      createdAt: new Date().toISOString(),
+      templateId: t.id,
+    });
+    changed = true;
+  }
+  return changed;
+}
+
+const NOTIF_LOG_CAP = 500;
+
+// Persistent, per-recipient notification log — replaces the old "recompute
+// from unread comments" bell and the separate kanban:nudges store. Entries
+// are never deleted, only marked readAt on ack, so the log doubles as a
+// scrollable history. One entry per (event, recipient).
+async function pushNotifs(kv, entries) {
+  if (!entries.length) return;
+  const log = await kvGet(kv, "kanban:notifLog", []);
+  for (const e of entries) {
+    log.push({
+      id: uid(),
+      commentId: null,
+      clientId: null,
+      createdAt: new Date().toISOString(),
+      readAt: null,
+      ...e,
+    });
+  }
+  const trimmed = log.length > NOTIF_LOG_CAP ? log.slice(log.length - NOTIF_LOG_CAP) : log;
+  await kvSet(kv, "kanban:notifLog", trimmed);
+}
+
+// Web Push send — best-effort, never throws. Prunes subscriptions the push
+// service reports as gone (404/410); leaves them on any other error (a
+// network hiccup shouldn't nuke a still-valid subscription).
+async function sendWebPush(env, kv, email, { title, body, cardId }) {
+  if (!env.VAPID_PRIVATE_KEY || !env.VAPID_PUBLIC_KEY || !env.VAPID_SUBJECT) return;
+  const all = await kvGet(kv, "push:web", {});
+  const subs = all[email];
+  if (!subs?.length) return;
+
+  const vapid = {
+    subject: env.VAPID_SUBJECT,
+    publicKey: env.VAPID_PUBLIC_KEY,
+    privateKey: env.VAPID_PRIVATE_KEY,
+  };
+  const message = {
+    data: JSON.stringify({ title, body, cardId }),
+    options: { ttl: 900, urgency: "high" },
+  };
+
+  let changed = false;
+  const kept = [];
+  for (const sub of subs) {
+    try {
+      const payload = await buildPushPayload(message, sub, vapid);
+      const res = await fetch(sub.endpoint, payload);
+      if (res.status === 404 || res.status === 410) {
+        changed = true;
+        continue;
+      }
+    } catch {
+      /* transient — keep the subscription */
+    }
+    kept.push(sub);
+  }
+  if (changed) {
+    all[email] = kept;
+    await kvSet(kv, "push:web", all);
+  }
+}
+
+// Expo push send (mobile) — a single relay call handles both Android/FCM and
+// iOS/APNs; best-effort, never throws.
+async function sendExpoPush(env, kv, email, { title, body, cardId }) {
+  const all = await kvGet(kv, "push:expo", {});
+  const tokens = all[email];
+  if (!tokens?.length) return;
+  await fetch("https://exp.host/--/api/v2/push/send", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(tokens.map((to) => ({ to, title, body, sound: "default", data: { cardId } }))),
+  }).catch(() => {});
+}
+
+// Fires both push channels for a batch of recipients, in parallel, wrapped
+// so a push failure never affects the request it's attached to.
+function dispatchPush(context, env, kv, recipients, payload) {
+  for (const to of recipients) {
+    context.waitUntil(sendWebPush(env, kv, to, payload).catch(() => {}));
+    context.waitUntil(sendExpoPush(env, kv, to, payload).catch(() => {}));
+  }
+}
+
+// Display labels for the "updated" notification's change summary — mirrors
+// mobile/src/lib/constants.ts's COLUMNS (backend has no shared frontend
+// import, kept in sync by hand, same convention as other cross-referenced
+// constants in this codebase).
+const COLUMN_LABEL = {
+  backlog: "Backlog",
+  todo: "A Fazer",
+  inprogress: "Em Andamento",
+  review: "Em Revisão",
+  done: "Concluído",
+};
+const PRIORITY_LABEL = { low: "baixa", medium: "média", high: "alta" };
+
+const reEscape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+// Members whose @firstname appears in the text (e.g. "@Pedro").
+function parseMentions(text, members) {
+  const t = String(text || "");
+  return members.filter((m) => {
+    const first = String(m.name || "").split(/\s+/)[0];
+    return first && new RegExp(`@${reEscape(first)}\\b`, "i").test(t);
+  });
+}
+
+// Everyone ever @mentioned in this card's comment thread — being tagged
+// once means you're now "watching" the card, same as an assignee, so later
+// edits (see "updated" notifications below) reach you too, not just the
+// specific comment you were tagged in.
+function resolveMentionedEmails(card) {
+  const emails = new Set();
+  for (const c of card.comments || []) {
+    for (const e of c.mentions || []) emails.add(e);
+  }
+  return [...emails];
+}
+
+// Best-effort email via Resend (no-op without RESEND_API_KEY).
+async function sendEmail(env, { to, subject, text, html, replyTo }) {
+  if (!env.RESEND_API_KEY || !to?.length) return;
+  await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: env.NOTIFY_FROM || "GOLD PLANNER <notificacoes@goldplanner.clubemkt.digital>",
+      to,
+      subject,
+      text,
+      html,
+      reply_to: replyTo || undefined,
+    }),
+  });
+}
+
+const escHtml = (s) =>
+  String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const initialsOf = (name) =>
+  (name || "?").split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+const hueOf = (name) => (name ? (name.charCodeAt(0) * 47) % 360 : 200);
+
+// Drop recipients who opted out of email notifications on their profile
+// (in-app/bell notifications are never filtered — this is email-only).
+function filterOptedIn(emails, authUsers) {
+  const optedOut = new Set(
+    authUsers
+      .filter((u) => u.emailNotifications === false)
+      .map((u) => String(u.email).toLowerCase())
+  );
+  return emails.filter((e) => !optedOut.has(String(e).toLowerCase()));
+}
+
+// Branded "Mineral" transactional email for a comment / material request / review.
+function notificationEmail({ authorName, authorEmail, authorHasAvatar, kind, text, cardTitle, projectName, projectColor, cardUrl, firstNames }) {
+  const isReq = kind === "request";
+  const isReviewed = kind === "reviewed";
+  const tag = isReviewed
+    ? { label: "Tarefa concluída", color: "#2E4A43", bg: "rgba(46,74,67,0.14)" }
+    : isReq
+      ? { label: "Nova solicitação", color: "#B8862F", bg: "rgba(184,134,47,0.14)" }
+      : { label: "Novo comentário", color: "#2E4A43", bg: "rgba(46,74,67,0.12)" };
+  const verb = isReviewed ? "revisou e concluiu" : isReq ? "fez uma solicitação" : "comentou";
+  const caption = isReviewed ? "concluiu esta tarefa" : `${verb} em uma tarefa`;
+
+  const body = escHtml(text)
+    .replace(/@(\w+)/g, (m, n) =>
+      firstNames.has(n.toLowerCase())
+        ? `<strong style="color:#2E4A43;">${m}</strong>`
+        : m
+    )
+    .replace(/\n/g, "<br>");
+
+  const pill = projectName
+    ? `<span style="display:inline-block;font-size:11px;font-weight:600;color:${projectColor || "#6b6355"};background:${(projectColor || "#8A8579")}22;padding:3px 9px;border-radius:6px;">${escHtml(projectName)}</span>`
+    : "";
+
+  const avatarCell = authorHasAvatar
+    ? `<img src="https://tasks.goldplanner.clubemkt.digital/api/avatar?email=${encodeURIComponent(authorEmail || "")}" width="38" height="38" alt="${initialsOf(authorName)}" style="display:block;width:38px;height:38px;border-radius:50%;object-fit:cover;" />`
+    : `<div style="width:38px;height:38px;border-radius:50%;background:hsl(${hueOf(authorName)} 60% 58%);color:#f8f3ea;font-weight:700;font-size:14px;text-align:center;line-height:38px;">${initialsOf(authorName)}</div>`;
+
+  return `<!doctype html><html lang="pt-BR"><body style="margin:0;padding:0;background:#efe8dc;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#efe8dc;padding:32px 16px;"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#f8f3ea;border:1px solid rgba(20,22,24,0.08);border-radius:16px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+<tr><td style="background:#141618;padding:16px 28px;">
+<span style="color:#f8f3ea;font-weight:700;letter-spacing:0.28em;font-size:13px;">GOLD PLANNER</span>
+<span style="color:#C7B79C;font-size:12px;"> &middot; Opera&ccedil;&otilde;es</span>
+</td></tr>
+<tr><td style="padding:28px;">
+<div style="display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.14em;color:${tag.color};background:${tag.bg};padding:5px 11px;border-radius:6px;margin-bottom:18px;">${tag.label}</div>
+<table role="presentation" cellpadding="0" cellspacing="0" style="margin-bottom:16px;"><tr>
+<td style="vertical-align:middle;">${avatarCell}</td>
+<td style="vertical-align:middle;padding-left:12px;"><div style="font-size:14px;font-weight:700;color:#141618;">${escHtml(authorName)}</div><div style="font-size:12px;color:#8A8579;">${caption}</div></td>
+</tr></table>
+<div style="font-size:20px;font-weight:700;color:#141618;line-height:1.25;margin-bottom:10px;">${escHtml(cardTitle)}</div>
+${pill}
+<div style="margin-top:18px;padding:14px 16px;background:rgba(20,22,24,0.035);border-left:3px solid ${tag.color};border-radius:8px;font-size:15px;color:#3a3a3a;line-height:1.55;">${body}</div>
+<div style="margin-top:26px;"><a href="${cardUrl}" style="display:inline-block;background:#2E4A43;color:#f8f3ea;font-weight:700;font-size:14px;text-decoration:none;padding:13px 26px;border-radius:10px;">Abrir no quadro &rarr;</a></div>
+</td></tr>
+<tr><td style="padding:18px 28px;border-top:1px solid rgba(20,22,24,0.07);">
+<div style="font-size:11px;color:#8A8579;line-height:1.5;">Voc&ecirc; recebeu este e-mail porque foi marcado em uma tarefa no GOLD PLANNER.</div>
+<a href="https://tasks.goldplanner.clubemkt.digital" style="font-size:11px;color:#2E4A43;text-decoration:none;font-weight:600;">tasks.goldplanner.clubemkt.digital</a>
+</td></tr>
+</table></td></tr></table></body></html>`;
+}
+
+// Mutates `card` in place: moves it to Done and appends a system "reviewed"
+// comment mentioning its assignees (so the existing bell/email pipeline picks
+// it up). Returns the comment + the assignee emails it mentioned.
+function markReviewed(card, members, reviewerEmail, reviewerName) {
+  card.reviewed = true;
+  card.reviewedAt = new Date().toISOString();
+  card.reviewedBy = reviewerName;
+  card.columnId = "done";
+  card.comments = card.comments || [];
+
+  const assigneeNames = card.assignees?.length
+    ? card.assignees
+    : card.assignee
+      ? [card.assignee]
+      : [];
+  const norm = (s) => String(s || "").trim().toLowerCase();
+  const mentioned = [
+    ...new Set(
+      assigneeNames
+        .map((n) => members.find((m) => norm(m.name) === norm(n))?.email)
+        .filter(Boolean)
+        .map((e) => e.toLowerCase())
+        .filter((e) => e !== norm(reviewerEmail))
+    ),
+  ];
+
+  const comment = {
+    id: uid(),
+    text: "revisou e concluiu esta tarefa",
+    kind: "reviewed",
+    author: reviewerEmail,
+    authorName: reviewerName,
+    mentions: mentioned,
+    createdAt: card.reviewedAt,
+    resolvedAt: null,
+    resolvedBy: null,
+  };
+  card.comments.push(comment);
+  return { comment, mentioned };
+}
+
+// Best-effort email + realtime broadcast for a just-reviewed card (mirrors the
+// mention-email flow above). Never throws — a missed notification/broadcast
+// shouldn't fail the review action itself.
+async function notifyReview(context, env, kv, card, mentioned, members, authUsers, reviewerEmail, reviewerName) {
+  const clients = await kvGet(kv, "kanban:clients", []);
+  const client = clients.find((c) => c.id === card.clientId);
+  const cardUrl = `https://tasks.goldplanner.clubemkt.digital/?card=${card.id}`;
+
+  if (mentioned.length) {
+    await pushNotifs(
+      kv,
+      mentioned.map((to) => ({
+        type: "reviewed",
+        to,
+        fromName: reviewerName,
+        fromEmail: reviewerEmail,
+        cardId: card.id,
+        cardTitle: card.title,
+        clientId: card.clientId,
+        text: "revisou e concluiu esta tarefa",
+      }))
+    );
+    dispatchPush(context, env, kv, mentioned, {
+      title: `${reviewerName} concluiu — ${card.title}`,
+      body: "revisou e concluiu esta tarefa",
+      cardId: card.id,
+    });
+    const recipients = filterOptedIn(mentioned, authUsers);
+    if (recipients.length) {
+      const authorHasAvatar = Boolean(
+        authUsers.find((u) => String(u.email).toLowerCase() === reviewerEmail.toLowerCase())?.avatar
+      );
+      const firstNames = new Set(members.map((m) => String(m.name).split(/\s+/)[0].toLowerCase()));
+      const html = notificationEmail({
+        authorName: reviewerName,
+        authorEmail: reviewerEmail,
+        authorHasAvatar,
+        kind: "reviewed",
+        text: "revisou e concluiu esta tarefa",
+        cardTitle: card.title,
+        projectName: client?.name,
+        projectColor: client?.color,
+        cardUrl,
+        firstNames,
+      });
+      context.waitUntil(
+        sendEmail(env, {
+          to: recipients,
+          subject: `${reviewerName} concluiu — ${card.title}`,
+          text: `${reviewerName} revisou e concluiu "${card.title}".\n\nAbrir: ${cardUrl}`,
+          html,
+          replyTo: reviewerEmail,
+        }).catch(() => {})
+      );
+    }
+  }
+
+  if (env.BOARD_ROOM) {
+    context.waitUntil(
+      env.BOARD_ROOM
+        .getByName("main")
+        .broadcast({ type: "card:reviewed", cardId: card.id, cardTitle: card.title, reviewerName })
+        .catch(() => {})
+    );
+  }
+}
+
+// ── Seed data (GOLD PLANNER) ───────────────────────────────────────────────────
+const DEFAULT_CLIENTS = [
+  { id: "goldplanner", name: "GOLD PLANNER", color: "#00E5FF" },
+  { id: "parceiro-a", name: "Parceiro A", color: "#C2FF00" },
+  { id: "parceiro-b", name: "Parceiro B", color: "#8B5CF6" },
+];
+
+const DEFAULT_MEMBERS = [
+  { id: "admin", name: "Admin", email: "hudsonargollo2@gmail.com", role: "Admin" },
+];
+
+export async function onRequest(context) {
+  const { request, env, params } = context;
+  const method = request.method;
+
+  if (method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
+
+  const kv = env.KANBAN;
+  if (!kv) return json({ error: "KV namespace KANBAN not bound" }, 500);
+
+  // params.path is the catch-all array, e.g. ["cards"] or ["cards", "abc123"]
+  const seg = Array.isArray(params.path) ? params.path : [params.path].filter(Boolean);
+  const [resource, id] = seg;
+
+  try {
+    // ── MEDIA (card resource / comment images, streamed from R2) ──────────
+    // Session-gated (unlike /api/blog/media, which is public) — these are
+    // internal task attachments, never embedded in outbound emails, so
+    // there's no need for an unauthenticated route.
+    if (resource === "media" && seg.length > 1 && method === "GET") {
+      const email = await getSessionEmail(request, env);
+      if (!email) return json({ error: "unauthorized" }, 401);
+      if (!env.BLOG_MEDIA) return json({ error: "R2 (BLOG_MEDIA) não vinculado." }, 500);
+      const key = seg.slice(1).join("/");
+      const obj = await env.BLOG_MEDIA.get(key);
+      if (!obj) return json({ error: "not found" }, 404);
+      return new Response(obj.body, {
+        headers: {
+          "Content-Type": obj.httpMetadata?.contentType || "image/jpeg",
+          "Cache-Control": "private, max-age=86400",
+        },
+      });
+    }
+
+    // ── CLIENTS ──────────────────────────────────────────────────────────
+    if (resource === "clients") {
+      if (!id) {
+        if (method === "GET") {
+          let clients = await kvGet(kv, "kanban:clients", null);
+          if (clients === null) {
+            clients = DEFAULT_CLIENTS;
+            await kvSet(kv, "kanban:clients", clients);
+          }
+          // project_type lives in D1 (captured at won-time — see
+          // ~/.claude/plans/goldplanner-adaptive-onboarding.md), not in this KV
+          // blob; merge it in by id (same string as the D1 `projects.id`
+          // per migrations/0003_hub_tasks.sql's header comment) rather than
+          // duplicating it into KV, so the D1 row stays the one source of
+          // truth. Best-effort — a missing/failed D1 read just means no tag.
+          if (env.DB) {
+            try {
+              const { results } = await env.DB.prepare("SELECT id, project_type FROM projects WHERE project_type IS NOT NULL").all();
+              const typeById = new Map(results.map((r) => [r.id, r.project_type]));
+              clients = clients.map((c) => (typeById.has(c.id) ? { ...c, projectType: typeById.get(c.id) } : c));
+            } catch {
+              /* best-effort tag — ignore */
+            }
+          }
+          return json({ clients });
+        }
+        if (method === "POST") {
+          const body = await request.json();
+          const clients = await kvGet(kv, "kanban:clients", DEFAULT_CLIENTS);
+          const client = { id: uid(), name: body.name, color: body.color ?? "#00E5FF" };
+          clients.push(client);
+          await kvSet(kv, "kanban:clients", clients);
+          return json({ client }, 201);
+        }
+      } else {
+        const clients = await kvGet(kv, "kanban:clients", DEFAULT_CLIENTS);
+        if (method === "PUT") {
+          const body = await request.json();
+          const updated = clients.map((c) => (c.id === id ? { ...c, ...body, id } : c));
+          await kvSet(kv, "kanban:clients", updated);
+          return json({ client: updated.find((c) => c.id === id) });
+        }
+        if (method === "DELETE") {
+          await kvSet(kv, "kanban:clients", clients.filter((c) => c.id !== id));
+          const cards = await loadCards(env);
+          await saveCards(env,cards.filter((c) => c.clientId !== id));
+          return json({ ok: true });
+        }
+      }
+    }
+
+    // ── CARDS ────────────────────────────────────────────────────────────
+    if (resource === "cards") {
+      // /cards/:id/comments[/:commentId[/resolve]] — managed independently so
+      // card edits never clobber the thread.
+      if (id && seg[2] === "comments") {
+        const email = await getSessionEmail(request, env);
+        if (!email) return json({ error: "unauthorized" }, 401);
+        const commentId = seg[3];
+        const cards = await loadCards(env);
+        const card = cards.find((c) => c.id === id);
+        if (!card) return json({ error: "Card not found" }, 404);
+        card.comments = card.comments || [];
+        const members = await kvGet(kv, "kanban:members", []);
+        const authorName =
+          members.find((m) => String(m.email).toLowerCase() === email.toLowerCase())?.name || email;
+        const save = () => saveCards(env,cards);
+
+        if (!commentId && method === "POST") {
+          const body = await request.json().catch(() => ({}));
+          const text = String(body.text || "").trim();
+          // Only accept image descriptors this card's own /images upload
+          // route just handed back (key must live under this card's R2
+          // prefix) — never trust arbitrary keys from the client.
+          const keyPattern = new RegExp(`^cards/${id}/[a-z0-9]+\\.(png|jpe?g|webp|gif)$`, "i");
+          const images = (Array.isArray(body.images) ? body.images : [])
+            .filter((img) => img && typeof img.key === "string" && keyPattern.test(img.key))
+            .slice(0, 6)
+            .map((img) => ({ id: img.id || uid(), key: img.key, name: String(img.name || "").slice(0, 120) }));
+          if (!text && !images.length) return json({ error: "Comentário vazio." }, 400);
+          // include the author too, so you can @mention yourself (e.g. to test)
+          const mentioned = parseMentions(text, members)
+            .map((m) => String(m.email || "").toLowerCase())
+            .filter(Boolean);
+          const comment = {
+            id: uid(),
+            text,
+            kind: body.kind === "request" ? "request" : "comment",
+            images,
+            author: email,
+            authorName,
+            mentions: [...new Set(mentioned)],
+            createdAt: new Date().toISOString(),
+            resolvedAt: null,
+            resolvedBy: null,
+          };
+          card.comments.push(comment);
+          await save();
+          // email mentioned teammates (best-effort, off-thread)
+          if (comment.mentions.length) {
+            const clients = await kvGet(kv, "kanban:clients", []);
+            const client = clients.find((c) => c.id === card.clientId);
+            const authUsers = await kvGet(kv, "auth:users", []);
+            const authorHasAvatar = Boolean(
+              authUsers.find((u) => String(u.email).toLowerCase() === email.toLowerCase())?.avatar
+            );
+            const verbSubj = comment.kind === "request" ? "fez uma solicitação" : "mencionou você";
+            const cardUrl = `https://tasks.goldplanner.clubemkt.digital/?card=${card.id}`;
+            const firstNames = new Set(
+              members.map((m) => String(m.name).split(/\s+/)[0].toLowerCase())
+            );
+            const html = notificationEmail({
+              authorName,
+              authorEmail: email,
+              authorHasAvatar,
+              kind: comment.kind,
+              text,
+              cardTitle: card.title,
+              projectName: client?.name,
+              projectColor: client?.color,
+              cardUrl,
+              firstNames,
+            });
+            const recipients = filterOptedIn(comment.mentions, authUsers);
+            if (recipients.length) {
+              context.waitUntil(
+                sendEmail(env, {
+                  to: recipients,
+                  subject: `${authorName} ${verbSubj} — ${card.title}`,
+                  text: `${authorName} ${verbSubj} em "${card.title}":\n\n${text}\n\nAbrir: ${cardUrl}`,
+                  html,
+                  replyTo: email,
+                }).catch(() => {})
+              );
+            }
+          }
+          if (comment.mentions.length) {
+            await pushNotifs(
+              kv,
+              comment.mentions.map((to) => ({
+                type: comment.kind === "request" ? "request" : "mention",
+                to,
+                fromName: authorName,
+                fromEmail: email,
+                cardId: card.id,
+                cardTitle: card.title,
+                clientId: card.clientId,
+                commentId: comment.id,
+                text: text.slice(0, 100),
+              }))
+            );
+            dispatchPush(context, env, kv, comment.mentions, {
+              title: `${authorName} ${comment.kind === "request" ? "fez uma solicitação" : "mencionou você"} — ${card.title}`,
+              body: text.slice(0, 140),
+              cardId: card.id,
+            });
+          }
+          if (comment.mentions.length && env.BOARD_ROOM) {
+            context.waitUntil(
+              env.BOARD_ROOM
+                .getByName("main")
+                .broadcast({
+                  type: "comment:mention",
+                  recipients: comment.mentions,
+                  cardId: card.id,
+                  cardTitle: card.title,
+                  commentId: comment.id,
+                  authorName,
+                  text: text.slice(0, 100),
+                })
+                .catch(() => {})
+            );
+          }
+
+          // Assignees who weren't explicitly @mentioned still get a bell +
+          // push notification for any comment on their task ("watch"-style,
+          // same reasoning as the card-update notification below) — just
+          // not an email, which stays reserved for a direct @mention/
+          // request so it doesn't turn into inbox noise for every comment
+          // on every task someone's assigned to.
+          const norm2 = (s) => String(s || "").trim().toLowerCase();
+          const passiveAssignees = resolveAssigneeEmails(card, members).filter(
+            (e) => e !== norm2(email) && !comment.mentions.includes(e)
+          );
+          if (passiveAssignees.length) {
+            await pushNotifs(
+              kv,
+              passiveAssignees.map((to) => ({
+                type: "comment",
+                to,
+                fromName: authorName,
+                fromEmail: email,
+                cardId: card.id,
+                cardTitle: card.title,
+                clientId: card.clientId,
+                commentId: comment.id,
+                text: text.slice(0, 100),
+              }))
+            );
+            dispatchPush(context, env, kv, passiveAssignees, {
+              title: `${authorName} comentou — ${card.title}`,
+              body: text.slice(0, 140),
+              cardId: card.id,
+            });
+          }
+          return json({ card, comment }, 201);
+        }
+        if (commentId && seg[4] === "nudge" && method === "POST") {
+          const c = card.comments.find((x) => x.id === commentId);
+          if (!c) return json({ error: "Comment not found" }, 404);
+          const body = await request.json().catch(() => ({}));
+          const to = String(body.to || "").toLowerCase().trim();
+          const norm = (s) => String(s || "").trim().toLowerCase();
+          if (!to || to === email.toLowerCase()) return json({ error: "Destinatário inválido." }, 400);
+
+          // Recipient must be card-relevant: an assignee or that comment's
+          // author. Server-side allowlist — never trust the client picker.
+          const assigneeNames = card.assignees?.length
+            ? card.assignees
+            : card.assignee
+              ? [card.assignee]
+              : [];
+          const assigneeEmails = assigneeNames
+            .map((n) => members.find((m) => norm(m.name) === norm(n))?.email)
+            .filter(Boolean)
+            .map((e) => e.toLowerCase());
+          const validTargets = new Set([...assigneeEmails, String(c.author).toLowerCase()]);
+          if (!validTargets.has(to))
+            return json({ error: "Só é possível chamar quem participa deste card." }, 403);
+
+          const notifLog = await kvGet(kv, "kanban:notifLog", []);
+          const cooldownMs = 45_000;
+          const recent = notifLog.find(
+            (n) =>
+              n.type === "nudge" &&
+              n.fromEmail === email &&
+              n.to === to &&
+              Date.now() - new Date(n.createdAt).getTime() < cooldownMs
+          );
+          if (recent) return json({ error: "Aguarde um instante antes de chamar novamente." }, 429);
+
+          const nudge = {
+            id: uid(),
+            type: "nudge",
+            to,
+            fromName: authorName,
+            fromEmail: email,
+            cardId: id,
+            cardTitle: card.title,
+            clientId: card.clientId,
+            commentId,
+            text: String(c.text || "").slice(0, 100),
+            createdAt: new Date().toISOString(),
+            readAt: null,
+          };
+          notifLog.push(nudge);
+          const trimmedLog =
+            notifLog.length > NOTIF_LOG_CAP ? notifLog.slice(notifLog.length - NOTIF_LOG_CAP) : notifLog;
+          await kvSet(kv, "kanban:notifLog", trimmedLog);
+          dispatchPush(context, env, kv, [to], {
+            title: `${authorName} chamou você — ${card.title}`,
+            body: nudge.text,
+            cardId: id,
+          });
+
+          if (env.BOARD_ROOM) {
+            context.waitUntil(
+              env.BOARD_ROOM.getByName("main").broadcast({ type: "nudge", ...nudge }).catch(() => {})
+            );
+          }
+          return json({ ok: true, nudge }, 201);
+        }
+        if (commentId && seg[4] === "resolve" && method === "POST") {
+          const c = card.comments.find((x) => x.id === commentId);
+          if (!c) return json({ error: "Comment not found" }, 404);
+          if (c.resolvedAt) {
+            c.resolvedAt = null;
+            c.resolvedBy = null;
+          } else {
+            c.resolvedAt = new Date().toISOString();
+            c.resolvedBy = authorName;
+          }
+          await save();
+          return json({ card });
+        }
+        if (commentId && method === "DELETE") {
+          const c = card.comments.find((x) => x.id === commentId);
+          if (c && c.author !== email && !isAdmin(email))
+            return json({ error: "Apenas o autor pode excluir." }, 403);
+          card.comments = card.comments.filter((x) => x.id !== commentId);
+          await save();
+          return json({ card });
+        }
+        return json({ error: "Not found" }, 404);
+      }
+
+      // /cards/:id/images — upload a resource or comment image to R2, under
+      // cards/<cardId>/<uid>.<ext>. Returns a descriptor only; it's the
+      // caller's job to attach it — either onto card.images (PUT /cards/:id)
+      // for a resource, or into a comment's `images` (POST .../comments) —
+      // so this one route serves both surfaces without knowing which.
+      if (id && seg[2] === "images" && !seg[3] && method === "POST") {
+        const email = await getSessionEmail(request, env);
+        if (!email) return json({ error: "unauthorized" }, 401);
+        if (!env.BLOG_MEDIA) return json({ error: "R2 (BLOG_MEDIA) não vinculado." }, 500);
+        const cards = await loadCards(env);
+        const card = cards.find((c) => c.id === id);
+        if (!card) return json({ error: "Card not found" }, 404);
+
+        const body = await request.json().catch(() => ({}));
+        const m = /^data:(image\/(png|jpe?g|webp|gif));base64,([a-z0-9+/=]+)$/i.exec(
+          String(body.dataUrl || "")
+        );
+        if (!m) return json({ error: "Imagem inválida." }, 400);
+        const [, contentType, , b64] = m;
+        let bytes;
+        try {
+          bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+        } catch {
+          return json({ error: "Imagem inválida." }, 400);
+        }
+        if (bytes.length > 8 * 1024 * 1024) return json({ error: "Imagem muito grande (máx. 8MB)." }, 400);
+
+        const ext = contentType.split("/")[1].replace("jpeg", "jpg");
+        const key = `cards/${id}/${uid()}.${ext}`;
+        await env.BLOG_MEDIA.put(key, bytes, { httpMetadata: { contentType } });
+        const image = {
+          id: uid(),
+          key,
+          name: String(body.name || "").slice(0, 120),
+          addedBy: email,
+          addedAt: new Date().toISOString(),
+        };
+        return json({ image }, 201);
+      }
+
+      // /cards/:id/review — mark reviewed, move to Done, notify + broadcast
+      if (id && seg[2] === "review" && method === "POST") {
+        const email = await getSessionEmail(request, env);
+        if (!email) return json({ error: "unauthorized" }, 401);
+        const cards = await loadCards(env);
+        const card = cards.find((c) => c.id === id);
+        if (!card) return json({ error: "Card not found" }, 404);
+        const members = await kvGet(kv, "kanban:members", []);
+        const authUsers = await kvGet(kv, "auth:users", []);
+        const reviewerName =
+          members.find((m) => String(m.email).toLowerCase() === email.toLowerCase())?.name || email;
+        const fromColumn = card.columnId;
+        const assigneeEmails = resolveAssigneeEmails(card, members);
+        const { mentioned } = markReviewed(card, members, email, reviewerName);
+        await saveCards(env,cards);
+        await notifyReview(context, env, kv, card, mentioned, members, authUsers, email, reviewerName);
+        if (env.DB) {
+          // Award XP BEFORE logging the "reviewed" task_event — the award
+          // function's reopen guard (wasAlreadyReviewed) counts existing
+          // to_column='reviewed' rows for this task, so logging first would
+          // make it see its own just-written row and skip itself.
+          await awardXpForReviewedTask(env.DB, {
+            taskId: card.id,
+            projectId: card.clientId,
+            dueDate: card.dueDate,
+            createdAt: card.createdAt,
+            reviewedAtIso: card.reviewedAt,
+            assigneeEmails,
+          });
+          await logTaskEvent(env.DB, {
+            taskId: card.id,
+            projectId: card.clientId,
+            fromColumn,
+            toColumn: "reviewed",
+            actorEmail: email,
+          });
+        }
+        return json({ card });
+      }
+
+      // /cards/:id/seen — mark this card's comments as read by the current user
+      if (id && seg[2] === "seen" && method === "POST") {
+        const email = await getSessionEmail(request, env);
+        if (!email) return json({ error: "unauthorized" }, 401);
+        const reads = await kvGet(kv, "kanban:reads", {});
+        reads[email] = reads[email] || {};
+        reads[email][id] = new Date().toISOString();
+        await kvSet(kv, "kanban:reads", reads);
+
+        // Read receipts: mark every comment I didn't author as seen by me.
+        const cards = await loadCards(env);
+        const card = cards.find((c) => c.id === id);
+        if (card) {
+          let changed = false;
+          for (const c of card.comments || []) {
+            if (c.author === email) continue;
+            c.seenBy = c.seenBy || [];
+            if (!c.seenBy.some((s) => s.email === email)) {
+              c.seenBy.push({ email, seenAt: reads[email][id] });
+              changed = true;
+            }
+          }
+          if (changed) await saveCards(env,cards);
+        }
+        return json({ ok: true });
+      }
+
+      if (!id) {
+        if (method === "GET") return json({ cards: await loadCards(env) });
+        if (method === "POST") {
+          const body = await request.json();
+          const cards = await loadCards(env);
+          let order = body.order;
+          if (order === undefined) {
+            const inColumn = cards.filter((c) => c.columnId === body.columnId);
+            order = inColumn.length ? Math.max(...inColumn.map((c) => c.order ?? 0)) + 1 : 0;
+          }
+          const card = { id: uid(), createdAt: new Date().toISOString(), ...body, order };
+          cards.push(card);
+          await saveCards(env,cards);
+          return json({ card }, 201);
+        }
+      } else if (id === "reorder" && method === "POST") {
+        const email = await getSessionEmail(request, env);
+        if (!email) return json({ error: "unauthorized" }, 401);
+        const body = await request.json().catch(() => ({}));
+        const columnId = body.columnId;
+        const orderedIds = Array.isArray(body.orderedIds) ? body.orderedIds : [];
+        if (!columnId || !orderedIds.length) return json({ error: "columnId e orderedIds são obrigatórios." }, 400);
+        const cards = await loadCards(env);
+        const indexById = new Map(orderedIds.map((cardId, i) => [cardId, i]));
+        for (const c of cards) {
+          if (c.columnId === columnId && indexById.has(c.id)) c.order = indexById.get(c.id);
+        }
+        await saveCards(env,cards);
+        return json({ ok: true });
+      } else if (id === "review-bulk" && method === "POST") {
+        const email = await getSessionEmail(request, env);
+        if (!email) return json({ error: "unauthorized" }, 401);
+        const body = await request.json().catch(() => ({}));
+        const ids = new Set(Array.isArray(body.ids) ? body.ids : []);
+        if (!ids.size) return json({ error: "Nenhum card selecionado." }, 400);
+        const cards = await loadCards(env);
+        const members = await kvGet(kv, "kanban:members", []);
+        const authUsers = await kvGet(kv, "auth:users", []);
+        const reviewerName =
+          members.find((m) => String(m.email).toLowerCase() === email.toLowerCase())?.name || email;
+        const reviewed = [];
+        for (const card of cards) {
+          if (!ids.has(card.id)) continue;
+          const fromColumn = card.columnId;
+          const assigneeEmails = resolveAssigneeEmails(card, members);
+          const { mentioned } = markReviewed(card, members, email, reviewerName);
+          reviewed.push({ card, mentioned, fromColumn, assigneeEmails });
+        }
+        await saveCards(env,cards);
+        for (const r of reviewed) {
+          await notifyReview(context, env, kv, r.card, r.mentioned, members, authUsers, email, reviewerName);
+          if (env.DB) {
+            // Award before logging — see the single-review handler above
+            // for why this order matters (the reopen guard would otherwise
+            // see its own just-written "reviewed" event).
+            await awardXpForReviewedTask(env.DB, {
+              taskId: r.card.id,
+              projectId: r.card.clientId,
+              dueDate: r.card.dueDate,
+              createdAt: r.card.createdAt,
+              reviewedAtIso: r.card.reviewedAt,
+              assigneeEmails: r.assigneeEmails,
+            });
+            await logTaskEvent(env.DB, {
+              taskId: r.card.id,
+              projectId: r.card.clientId,
+              fromColumn: r.fromColumn,
+              toColumn: "reviewed",
+              actorEmail: email,
+            });
+          }
+        }
+        return json({ cards: reviewed.map((r) => r.card) });
+      } else {
+        const cards = await loadCards(env);
+        if (method === "PUT") {
+          const body = await request.json();
+          const card = cards.find((c) => c.id === id);
+          if (!card) return json({ error: "Card not found" }, 404);
+
+          const email = await getSessionEmail(request, env);
+          const members = await kvGet(kv, "kanban:members", []);
+          const norm = (s) => String(s || "").trim().toLowerCase();
+          const actorName =
+            members.find((m) => norm(m.email) === norm(email))?.name || email || "Alguém";
+
+          // Dragging a previously-reviewed card back out of Done (e.g. into
+          // Em Revisão) reopens it — clear the reviewed flags and log it in
+          // the comment thread, mirroring the request resolve/reopen pattern.
+          let reopenComment = null;
+          if (card.reviewed && "columnId" in body && body.columnId !== "done" && body.columnId !== card.columnId) {
+            body.reviewed = false;
+            body.reviewedAt = null;
+            body.reviewedBy = null;
+            reopenComment = {
+              id: uid(),
+              text: "reabriu esta tarefa",
+              kind: "reviewed",
+              reopened: true,
+              author: email || "",
+              authorName: actorName,
+              mentions: [],
+              createdAt: new Date().toISOString(),
+              resolvedAt: null,
+              resolvedBy: null,
+            };
+          }
+
+          // Newly-added assignees get a realtime + bell notification (removed
+          // ones and unchanged ones don't).
+          const oldNames = card.assignees?.length ? card.assignees : card.assignee ? [card.assignee] : [];
+          const newNames = body.assignees ?? oldNames;
+          const addedNames = newNames.filter((n) => !oldNames.includes(n));
+          const addedEmails = [
+            ...new Set(
+              addedNames
+                .map((n) => members.find((m) => norm(m.name) === norm(n))?.email)
+                .filter(Boolean)
+                .map((e) => e.toLowerCase())
+                .filter((e) => e !== norm(email))
+            ),
+          ];
+
+          // Reopening notifies the card's current assignees (excluding whoever
+          // just reopened it) — same audience `markReviewed` mentions on completion.
+          const reopenedEmails = reopenComment
+            ? [
+                ...new Set(
+                  oldNames
+                    .map((n) => members.find((m) => norm(m.name) === norm(n))?.email)
+                    .filter(Boolean)
+                    .map((e) => e.toLowerCase())
+                    .filter((e) => e !== norm(email))
+                ),
+              ]
+            : [];
+
+          // never let a card edit overwrite the comment thread
+          const columnChanged = "columnId" in body && body.columnId !== card.columnId;
+          const fromColumn = card.columnId;
+          const updated = cards.map((c) => {
+            if (c.id !== id) return c;
+            const merged = { ...c, ...body, id, comments: c.comments };
+            if (reopenComment) merged.comments = [...(c.comments || []), reopenComment];
+            return merged;
+          });
+          await saveCards(env,updated);
+          const updatedCard = updated.find((c) => c.id === id);
+
+          if (columnChanged && env.DB) {
+            await logTaskEvent(env.DB, {
+              taskId: id,
+              projectId: updatedCard.clientId,
+              fromColumn,
+              toColumn: body.columnId,
+              actorEmail: email,
+            });
+          }
+
+          if (addedEmails.length) {
+            await pushNotifs(
+              kv,
+              addedEmails.map((to) => ({
+                type: "assigned",
+                to,
+                fromName: actorName,
+                fromEmail: email,
+                cardId: id,
+                cardTitle: updatedCard.title,
+                clientId: updatedCard.clientId,
+              }))
+            );
+            dispatchPush(context, env, kv, addedEmails, {
+              title: `${actorName} atribuiu você — ${updatedCard.title}`,
+              body: "Você foi adicionado como responsável.",
+              cardId: id,
+            });
+          }
+          if (reopenedEmails.length) {
+            await pushNotifs(
+              kv,
+              reopenedEmails.map((to) => ({
+                type: "reopened",
+                to,
+                fromName: actorName,
+                fromEmail: email,
+                cardId: id,
+                cardTitle: updatedCard.title,
+                clientId: updatedCard.clientId,
+                text: "reabriu esta tarefa",
+              }))
+            );
+            dispatchPush(context, env, kv, reopenedEmails, {
+              title: `${actorName} reabriu — ${updatedCard.title}`,
+              body: "A tarefa voltou a ficar em aberto.",
+              cardId: id,
+            });
+          }
+
+          // Any other field change on a card notifies its current assignees
+          // AND anyone ever @mentioned in its comments — "watch"-style, so
+          // both an assignee and a tagged teammate hear about every action
+          // on the task, not just being added/reopened or the one comment
+          // they were tagged in. Column changes that already fired the
+          // reopen notification above, and whoever just got freshly
+          // assigned above, are excluded here so nobody gets two
+          // notifications for the same PUT.
+          const changeDescriptions = [];
+          if ("columnId" in body && body.columnId !== fromColumn && !reopenComment) {
+            changeDescriptions.push(`moveu para ${COLUMN_LABEL[body.columnId] || body.columnId}`);
+          }
+          if ("dueDate" in body && body.dueDate !== card.dueDate) {
+            changeDescriptions.push(body.dueDate ? "alterou o prazo" : "removeu o prazo");
+          }
+          if ("priority" in body && body.priority !== card.priority) {
+            changeDescriptions.push(`mudou a prioridade para ${PRIORITY_LABEL[body.priority] || body.priority}`);
+          }
+          if ("title" in body && body.title !== card.title) {
+            changeDescriptions.push("editou o título");
+          }
+          if ("description" in body && body.description !== card.description) {
+            changeDescriptions.push("editou a descrição");
+          }
+          const alreadyNotified = new Set([...addedEmails, ...reopenedEmails]);
+          const updatedEmails = changeDescriptions.length
+            ? [
+                ...new Set([
+                  ...resolveAssigneeEmails(updatedCard, members),
+                  ...resolveMentionedEmails(updatedCard),
+                ]),
+              ].filter((e) => e !== norm(email) && !alreadyNotified.has(e))
+            : [];
+          if (updatedEmails.length) {
+            const text = changeDescriptions.join(", ");
+            await pushNotifs(
+              kv,
+              updatedEmails.map((to) => ({
+                type: "updated",
+                to,
+                fromName: actorName,
+                fromEmail: email,
+                cardId: id,
+                cardTitle: updatedCard.title,
+                clientId: updatedCard.clientId,
+                text,
+              }))
+            );
+            dispatchPush(context, env, kv, updatedEmails, {
+              title: `${actorName} atualizou — ${updatedCard.title}`,
+              body: text,
+              cardId: id,
+            });
+          }
+
+          if (addedEmails.length && env.BOARD_ROOM) {
+            context.waitUntil(
+              env.BOARD_ROOM
+                .getByName("main")
+                .broadcast({
+                  type: "card:assigned",
+                  recipients: addedEmails,
+                  cardId: id,
+                  cardTitle: updatedCard.title,
+                  byName: actorName,
+                })
+                .catch(() => {})
+            );
+          }
+          if (reopenedEmails.length && env.BOARD_ROOM) {
+            context.waitUntil(
+              env.BOARD_ROOM
+                .getByName("main")
+                .broadcast({
+                  type: "card:reopened",
+                  recipients: reopenedEmails,
+                  cardId: id,
+                  cardTitle: updatedCard.title,
+                  byName: actorName,
+                })
+                .catch(() => {})
+            );
+          }
+          return json({ card: updatedCard });
+        }
+        if (method === "DELETE") {
+          await saveCards(env,cards.filter((c) => c.id !== id));
+          // Best-effort: sweep every R2 object under this card's prefix
+          // (resource images + comment images alike) so deleting a card
+          // doesn't leave orphaned blobs behind.
+          if (env.BLOG_MEDIA) {
+            const { objects } = await env.BLOG_MEDIA.list({ prefix: `cards/${id}/` });
+            await Promise.all(objects.map((o) => env.BLOG_MEDIA.delete(o.key).catch(() => {})));
+          }
+          return json({ ok: true });
+        }
+      }
+    }
+
+    // ── MEMBERS ──────────────────────────────────────────────────────────
+    if (resource === "members") {
+      if (!id) {
+        if (method === "GET") {
+          let members = await kvGet(kv, "kanban:members", null);
+          if (members === null) {
+            members = DEFAULT_MEMBERS;
+            await kvSet(kv, "kanban:members", members);
+          }
+          return json({ members });
+        }
+        if (method === "POST") {
+          const body = await request.json();
+          const members = await kvGet(kv, "kanban:members", DEFAULT_MEMBERS);
+          const member = { id: uid(), ...body };
+          members.push(member);
+          await kvSet(kv, "kanban:members", members);
+          return json({ member }, 201);
+        }
+      } else {
+        const members = await kvGet(kv, "kanban:members", DEFAULT_MEMBERS);
+        if (method === "PUT") {
+          const body = await request.json();
+          const updated = members.map((m) => (m.id === id ? { ...m, ...body, id } : m));
+          await kvSet(kv, "kanban:members", updated);
+          return json({ member: updated.find((m) => m.id === id) });
+        }
+        if (method === "DELETE") {
+          await kvSet(kv, "kanban:members", members.filter((m) => m.id !== id));
+          return json({ ok: true });
+        }
+      }
+    }
+
+    // ── PERSONAL TODOS (private per-user daily checklist, bundled by day) ──
+    // Own KV key per user (not a shared blob filtered client-side, unlike
+    // notifLog below) — this list is never read by anyone but its owner.
+    if (resource === "todos") {
+      const email = await getSessionEmail(request, env);
+      if (!email) return json({ error: "unauthorized" }, 401);
+      const key = `kanban:todos:${email}`;
+      const raw = await kvGet(kv, key, { templates: [], items: [] });
+      const { migrated, store } = migrateTodoStore(raw);
+
+      const attachRecurrence = (item) => ({
+        ...item,
+        recurrence: store.templates.find((t) => t.id === item.templateId)?.recurrence ?? null,
+      });
+
+      if (!id) {
+        if (method === "GET") {
+          const date = new URL(request.url).searchParams.get("date") || todayISO();
+          const changed = materializeTodos(store, date);
+          if (migrated || changed) await kvSet(kv, key, store);
+          const items = store.items.filter((i) => i.date === date).map(attachRecurrence);
+          return json({ items, date });
+        }
+        if (method === "POST") {
+          const body = await request.json();
+          const text = String(body.text || "").trim();
+          const date = body.date || todayISO();
+          if (!text) return json({ error: "Texto obrigatório." }, 400);
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return json({ error: "Data inválida." }, 400);
+
+          let templateId = null;
+          if (body.recurrence) {
+            if (!["daily", "weekdays", "weekly"].includes(body.recurrence)) {
+              return json({ error: "Recorrência inválida." }, 400);
+            }
+            const template = {
+              id: uid(),
+              text,
+              recurrence: body.recurrence,
+              weeklyDay: body.recurrence === "weekly" ? new Date(`${date}T00:00:00`).getDay() : null,
+              startDate: date,
+              createdAt: new Date().toISOString(),
+            };
+            store.templates.push(template);
+            templateId = template.id;
+          }
+          const item = { id: uid(), text, date, done: false, createdAt: new Date().toISOString(), templateId };
+          store.items.push(item);
+          await kvSet(kv, key, store);
+          return json({ item: attachRecurrence(item) }, 201);
+        }
+      } else {
+        if (method === "PUT") {
+          const body = await request.json();
+          const idx = store.items.findIndex((t) => t.id === id);
+          if (idx === -1) return json({ error: "not found" }, 404);
+          store.items[idx] = {
+            ...store.items[idx],
+            ...(body.text !== undefined ? { text: String(body.text) } : {}),
+            ...(body.done !== undefined ? { done: Boolean(body.done) } : {}),
+          };
+          await kvSet(kv, key, store);
+          return json({ item: attachRecurrence(store.items[idx]) });
+        }
+        if (method === "DELETE") {
+          const series = new URL(request.url).searchParams.get("series") === "1";
+          const target = store.items.find((t) => t.id === id);
+          if (series && target?.templateId) {
+            // Stop the series: drop the template (no more future materialization)
+            // and any not-yet-past instances, but keep history before today.
+            const today = todayISO();
+            store.templates = store.templates.filter((t) => t.id !== target.templateId);
+            store.items = store.items.filter((t) => t.templateId !== target.templateId || t.date < today);
+          } else {
+            store.items = store.items.filter((t) => t.id !== id);
+          }
+          await kvSet(kv, key, store);
+          return json({ ok: true });
+        }
+      }
+    }
+
+    // ── NOTIFICATIONS (persistent per-recipient log) ───────────────────────
+    if (resource === "notifications" && method === "GET") {
+      const email = await getSessionEmail(request, env);
+      if (!email) return json({ error: "unauthorized" }, 401);
+      const log = await kvGet(kv, "kanban:notifLog", []);
+      const items = log
+        .filter((n) => n.to === email)
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      const unreadCount = items.filter((n) => !n.readAt).length;
+      return json({ items, unreadCount });
+    }
+
+    if (resource === "notifications" && id === "ack" && method === "POST") {
+      const email = await getSessionEmail(request, env);
+      if (!email) return json({ error: "unauthorized" }, 401);
+      const body = await request.json().catch(() => ({}));
+      const ids = Array.isArray(body.ids) ? new Set(body.ids) : null;
+      const all = Boolean(body.all);
+      const log = await kvGet(kv, "kanban:notifLog", []);
+      let changed = false;
+      const now = new Date().toISOString();
+      // Newly-acked notifications that reference a specific comment (mention/
+      // request) also feed the read-receipts system below — see the seenBy
+      // block right after this loop.
+      const seenTargets = [];
+      for (const n of log) {
+        if (n.to !== email) continue;
+        if (!all && (!ids || !ids.has(n.id))) continue;
+        if (!n.readAt) {
+          n.readAt = now;
+          changed = true;
+          if (n.cardId && n.commentId) seenTargets.push({ cardId: n.cardId, commentId: n.commentId });
+        }
+      }
+      if (changed) await kvSet(kv, "kanban:notifLog", log);
+
+      // Unify notification read-state with comment read-receipts — previously
+      // two entirely independent systems (kanban:notifLog's readAt vs. each
+      // comment's own seenBy[], no cross-reference at all). Acking a mention/
+      // request notification now also marks the specific comment it refers to
+      // as seen by me, same as opening the card would (POST /cards/:id/seen),
+      // but scoped to just that one comment instead of every unauthored
+      // comment on the card.
+      if (seenTargets.length) {
+        const cards = await loadCards(env);
+        let cardsChanged = false;
+        for (const { cardId, commentId } of seenTargets) {
+          const card = cards.find((c) => c.id === cardId);
+          const comment = card?.comments?.find((c) => c.id === commentId);
+          if (!comment || comment.author === email) continue;
+          comment.seenBy = comment.seenBy || [];
+          if (!comment.seenBy.some((s) => s.email === email)) {
+            comment.seenBy.push({ email, seenAt: now });
+            cardsChanged = true;
+          }
+        }
+        if (cardsChanged) await saveCards(env, cards);
+      }
+
+      return json({ ok: true });
+    }
+
+    // ── REVIEWS (meeting-notes validation popup, per-user) ────────────────
+    if (resource === "reviews") {
+      const email = await getSessionEmail(request, env);
+      if (!email) return json({ error: "unauthorized" }, 401);
+      const reviews = await kvGet(kv, "ingest:reviews", []);
+
+      if (!id && method === "GET") {
+        const cutoff = Date.now() - REVIEW_TTL_MS;
+        const pending = reviews
+          .filter(
+            (r) =>
+              !(r.seenBy || []).includes(email) &&
+              new Date(r.createdAt).getTime() > cutoff
+          )
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        return json({ reviews: pending });
+      }
+
+      if (id === "ack" && method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        const ids = Array.isArray(body.ids) ? new Set(body.ids) : null;
+        let changed = false;
+        for (const r of reviews) {
+          if (ids && !ids.has(r.id)) continue;
+          if (!(r.seenBy || []).includes(email)) {
+            r.seenBy = [...(r.seenBy || []), email];
+            changed = true;
+          }
+        }
+        if (changed) await kvSet(kv, "ingest:reviews", reviews);
+        return json({ ok: true });
+      }
+    }
+
+    return json({ error: "Not found" }, 404);
+  } catch (e) {
+    return json({ error: e.message ?? "Server error" }, 500);
+  }
+}

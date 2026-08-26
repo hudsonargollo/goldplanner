@@ -1,0 +1,21 @@
+# Standalone redirector for go.goldplanner.clubemkt.digital — Gold Planner's own short-link
+# domain, kept separate from Código Internacional's links.goldplanner.clubemkt.digital
+# (a different, unrelated business already live on that subdomain). See
+# ~/.claude/plans/clever-crunching-raccoon.md, Phase D.
+#
+# Deploy:
+#   cd worker-links && npx wrangler deploy
+
+name = "goldplanner-wa-links-redirect"
+main = "./src/index.js"
+compatibility_date = "2024-11-01"
+account_id = "193882a3226d5fb9c3611ea50c95992e"
+
+routes = [
+  { pattern = "go.goldplanner.clubemkt.digital", custom_domain = true },
+]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "hub-goldplanner"
+database_id = "062719db-dc4e-46c0-a9d9-bdb4fef61a30"

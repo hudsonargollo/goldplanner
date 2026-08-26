@@ -1,0 +1,70 @@
+name = "goldplanner-app"
+pages_build_output_dir = "dist"
+# `npm run deploy` (this Pages project) only serves tasks.goldplanner.clubemkt.digital.
+# The goldplanner.clubemkt.digital/hub and /task routes cut over to a separate Worker —
+# see wrangler.worker.toml, deployed via `npm run deploy:hub`. Deploying
+# only this one will NOT update what's live at goldplanner.clubemkt.digital/hub, which
+# is what most people mean by "the Hub app" — confirmed the hard way after
+# several deploys here left goldplanner.clubemkt.digital/hub stuck on old content.
+compatibility_date = "2024-11-01"
+# Required by @block65/webcrypto-web-push (Phase B web push): it has a
+# `node:crypto` fallback import for non-Workers runtimes that's never
+# actually reached here (globalThis.crypto is always present in Workers),
+# but the bundler still needs this flag to resolve it without warning/erroring.
+compatibility_flags = ["nodejs_compat"]
+
+# KV binding for the kanban API (Pages Functions read env.KANBAN).
+# id is filled in after `wrangler kv namespace create KANBAN`.
+[[kv_namespaces]]
+binding = "KANBAN"
+id = "b06af75d5fe74e4c83863bf6a36030d0"
+
+# D1 — Hub Gold Planner relational data (users/projects/tasks/contracts/invoices/
+# addons/internal finances). KV above stays for what it's already good at
+# (push subscriptions, per-user todos, notification log) — this is additive,
+# not a replacement. See migrations/ for schema.
+[[d1_databases]]
+binding = "DB"
+database_name = "hub-goldplanner"
+database_id = "062719db-dc4e-46c0-a9d9-bdb4fef61a30"
+
+# Phase 2 cutover flag for the kanban cards store (see _lib/tasksStore.js).
+# "kv" = unchanged behavior (default, safe). Flip to "d1" only after the
+# one-time migration's data has been spot-checked against the KV source —
+# reverting is just flipping this back and redeploying.
+[vars]
+TASKS_BACKEND = "d1"
+# NOTIFY_FROM used to live here, but `wrangler pages deploy` never actually
+# applied [vars] to the live Pages project (confirmed: `wrangler pages secret
+# list` showed it absent, and @mention emails were falling back to the
+# unverified goldplanner.clubemkt.digital sender). Fixed for real via
+# `wrangler pages secret put NOTIFY_FROM --project-name=goldplanner-app`
+# (2026-08-15) — a proper Pages secret, not a wrangler.toml var. Keeping both
+# here AND as a secret makes `wrangler pages deploy` fail outright ("Binding
+# name 'NOTIFY_FROM' already in use"), so this entry is deliberately removed
+# rather than merely redundant.
+
+# Durable Object binding for realtime board broadcasts (confetti on card
+# review). The class itself lives in the separate `realtime-worker/` Worker —
+# Pages Functions can't define Durable Objects, only consume one. Deploy that
+# Worker (`cd realtime-worker && npm run deploy`) before deploying this Pages
+# project, or the binding won't resolve.
+[[durable_objects.bindings]]
+name = "BOARD_ROOM"
+class_name = "BoardRoom"
+script_name = "goldplanner-realtime"
+
+# Boards realtime sync (Phase B) — one DO instance per board id. Deploy
+# boards-sync-worker (`cd boards-sync-worker && npm run deploy`) before
+# deploying this Pages project, same ordering constraint as BOARD_ROOM above.
+[[durable_objects.bindings]]
+name = "BOARDS_SYNC"
+class_name = "BoardSyncRoom"
+script_name = "goldplanner-boards-sync"
+
+# Boards feature (collaborative Notion+Miro-style docs/canvas, BlockSuite) — Yjs
+# snapshot blobs. Bucket itself is a one-time manual create:
+# `wrangler r2 bucket create goldplanner-boards-data`.
+[[r2_buckets]]
+binding = "BOARDS_DATA"
+bucket_name = "goldplanner-boards-data"

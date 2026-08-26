@@ -1,0 +1,105 @@
+# Workers deployment target for the goldplanner.clubemkt.digital/hub + /task migration
+# (see plan: unify marketing/hub/crm/portal under goldplanner.clubemkt.digital path routing).
+# Deliberately a SEPARATE config from wrangler.toml (the live Pages project,
+# still serving tasks.goldplanner.clubemkt.digital unchanged via `npm run deploy`) so this
+# migration is purely additive — nothing about the existing Pages deploy
+# pipeline changes until we're ready to formally cut over.
+#
+# Build before deploying:
+#   npm run build && npx wrangler pages functions build --outdir=./dist/_worker.js/
+# Deploy:
+#   npx wrangler deploy --config wrangler.worker.toml
+
+name = "goldplanner-hub"
+main = "./worker/hub-entry.js"
+compatibility_date = "2024-11-01"
+compatibility_flags = ["nodejs_compat"]
+account_id = "193882a3226d5fb9c3611ea50c95992e"
+
+routes = [
+  # Both the wildcard AND the bare exact path are needed — "/hub/*" does NOT
+  # match a bare "/hub" with no trailing slash (confirmed live: 404'd
+  # straight through to the marketing site's own 404 page). hub-entry.js's
+  # fetch handler already tolerates the bare path correctly; it was only
+  # ever the route pattern that was missing it.
+  { pattern = "goldplanner.clubemkt.digital/hub", zone_name = "goldplanner.clubemkt.digital" },
+  { pattern = "goldplanner.clubemkt.digital/hub/*", zone_name = "goldplanner.clubemkt.digital" },
+  { pattern = "goldplanner.clubemkt.digital/task", zone_name = "goldplanner.clubemkt.digital" },
+  { pattern = "goldplanner.clubemkt.digital/task/*", zone_name = "goldplanner.clubemkt.digital" },
+]
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+# SPA fallback — this app has no real URL-based routing (App.jsx branches by
+# React state, not paths), so any non-file request under /hub/* or /task/*
+# must resolve to index.html for the client bundle to boot. Mirrors Pages'
+# implicit default SPA fallback (no _redirects file exists in this repo
+# today because Pages does this automatically; Workers assets requires it
+# explicit).
+not_found_handling = "single-page-application"
+# Every request (assets included, not just /api/*) must go through
+# worker/hub-entry.js first to strip the /hub or /task prefix — the compiled
+# Pages Functions handler's own internal asset fallback expects root-relative
+# paths matching the physical dist/ layout (e.g. "/assets/...", not
+# "/hub/assets/..."), same as vite's `base: "/hub/"` setting.
+run_worker_first = true
+
+# Same bindings as wrangler.toml (identical KV/D1 — this Worker reads/writes
+# the SAME production data as the Pages deployment; both can run in parallel
+# safely since it's the same underlying D1/KV, not a copy).
+[[kv_namespaces]]
+binding = "KANBAN"
+id = "b06af75d5fe74e4c83863bf6a36030d0"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "hub-goldplanner"
+database_id = "062719db-dc4e-46c0-a9d9-bdb4fef61a30"
+
+[vars]
+TASKS_BACKEND = "d1"
+# See wrangler.toml for why this is needed — Resend only has
+# send.goldplanner.clubemkt.digital verified, not the bare domain the code fell back to.
+NOTIFY_FROM = "GOLD PLANNER <notificacoes@send.goldplanner.clubemkt.digital>"
+
+[[durable_objects.bindings]]
+name = "BOARD_ROOM"
+class_name = "BoardRoom"
+script_name = "goldplanner-realtime"
+
+# Boards realtime sync (Phase B) — one DO instance per board id. Deploy
+# boards-sync-worker (`cd boards-sync-worker && npm run deploy`) before
+# deploying this Worker, same ordering constraint as BOARD_ROOM above.
+[[durable_objects.bindings]]
+name = "BOARDS_SYNC"
+class_name = "BoardSyncRoom"
+script_name = "goldplanner-boards-sync"
+
+# /blog: cover-illustration storage (see functions/api/blog/[[path]].js and
+# worker/lib/blogService.js). Illustrations are generated fresh per article
+# via Workers AI below, not fetched from anywhere — R2 is just where the
+# resulting PNG bytes live once generated.
+[[r2_buckets]]
+binding = "BLOG_MEDIA"
+bucket_name = "goldplanner-blog-media"
+
+# Boards feature (collaborative Notion+Miro-style docs/canvas, BlockSuite) — Yjs
+# snapshot blobs. Same bucket as wrangler.toml's binding — one-time manual
+# create: `wrangler r2 bucket create goldplanner-boards-data`.
+[[r2_buckets]]
+binding = "BOARDS_DATA"
+bucket_name = "goldplanner-boards-data"
+
+# /blog: cover-illustration generation (FLUX.1 [schnell]) — native Cloudflare
+# binding, no external API key/credits, no vendor dependency. Chosen after
+# Higgsfield (the tool used for the /login redesign) ran out of credits
+# mid-session; validated live before committing to this as the primary path.
+[ai]
+binding = "AI"
+
+# /blog: autonomous weekly draft generation (Hudson reviews/approves before
+# anything publishes — see functions/api/blog/[[path]].js's admin routes).
+# Monday 10am São Paulo (UTC-3) = 13:00 UTC.
+[triggers]
+crons = ["0 13 * * 1"]
