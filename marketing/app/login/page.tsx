@@ -14,7 +14,6 @@
  *   STAFF / ADMIN -> /hub
  */
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mail, Lock, ArrowRight, ArrowLeft, ShieldQuestion, UserPlus } from "lucide-react";
 import Logo from "@/components/Logo";
@@ -24,52 +23,18 @@ const AUTH_BASE = "/hub/api/auth";
 const ADMIN_CONTACT = "hudsonargollo2@gmail.com";
 const EASE = [0.22, 1, 0.36, 1] as [number, number, number, number];
 
-// Same 12-entry deck as migrations/0013_hub_builder_profile.sql's
-// skill_cards (the gamification feature's stoic+biblical wisdom cards) —
-// duplicated here rather than fetched, since this page is public/
-// unauthenticated and the content is purely atmospheric, not data. Picked
-// deterministically by day-of-year so it reads as "today's phrase" (same
-// for every visitor that day) rather than a random reshuffle per load.
-const DAILY_WISDOM = [
-  { skill: "Disciplina", stoic: "Você tem poder sobre sua mente, não sobre eventos externos. Perceba isso, e encontrará força.", stoicSrc: "Marco Aurélio, Meditações", bible: "Aquele que domina o seu espírito é melhor do que o que toma uma cidade.", bibleRef: "Provérbios 16:32" },
-  { skill: "Diligência", stoic: "Não é porque as coisas são difíceis que não ousamos, é porque não ousamos que são difíceis.", stoicSrc: "Sêneca", bible: "A mão dos diligentes dominará, mas a mão preguiçosa ficará sob tributo.", bibleRef: "Provérbios 12:24" },
-  { skill: "Paciência", stoic: "Não é o que acontece com você, mas como você reage a isso, que importa.", stoicSrc: "Epicteto, Enquiridion", bible: "O fim das coisas é melhor do que o princípio delas; e o paciente de espírito é melhor do que o altivo de espírito.", bibleRef: "Eclesiastes 7:8" },
-  { skill: "Foco", stoic: "Concentre-se apenas no que está diante de você, como se fosse a última coisa que você faz na vida.", stoicSrc: "Marco Aurélio, Meditações", bible: "Os teus olhos olhem direto para diante de ti.", bibleRef: "Provérbios 4:25" },
-  { skill: "Humildade", stoic: "Nenhum homem é livre se não é senhor de si mesmo.", stoicSrc: "Epicteto", bible: "Antes da quebra vem a soberba, e antes da queda, o espírito altivo.", bibleRef: "Provérbios 16:18" },
-  { skill: "Coragem", stoic: "Não busque que as coisas aconteçam como você deseja, mas deseje que elas aconteçam como acontecem, e você viverá em paz.", stoicSrc: "Epicteto, Enquiridion", bible: "Sê forte e corajoso; não temas, nem te espantes; porque o Senhor teu Deus é contigo, por onde quer que andares.", bibleRef: "Josué 1:9" },
-  { skill: "Excelência", stoic: "Faze cada ato da vida como se fosse o último.", stoicSrc: "Marco Aurélio, Meditações", bible: "Tudo quanto te vier à mão para fazer, faze-o conforme as tuas forças.", bibleRef: "Eclesiastes 9:10" },
-  { skill: "Integridade", stoic: "Nunca estime como vantagem para si algo que um dia o obrigue a quebrar sua palavra ou perder o respeito por si mesmo.", stoicSrc: "Marco Aurélio, Meditações", bible: "A integridade dos retos os encaminhará, mas a perversidade dos aleivosos os destruirá.", bibleRef: "Provérbios 11:3" },
-  { skill: "Perseverança", stoic: "A dificuldade mostra o que os homens são.", stoicSrc: "Epicteto", bible: "Não nos cansemos de fazer o bem, pois a seu tempo colheremos, se não desfalecermos.", bibleRef: "Gálatas 6:9" },
-  { skill: "Domínio Próprio", stoic: "Se você quer melhorar, esteja disposto a ser considerado tolo e estúpido em relação às coisas externas.", stoicSrc: "Epicteto", bible: "Como a cidade derribada, sem muro, assim é o homem que não pode conter o seu espírito.", bibleRef: "Provérbios 25:28" },
-  { skill: "Sabedoria", stoic: "Não é o homem que tem pouco, mas o que deseja mais, que é pobre.", stoicSrc: "Sêneca", bible: "Pela sabedoria se edifica a casa, e pelo entendimento ela se firma.", bibleRef: "Provérbios 24:3" },
-  { skill: "Visão", stoic: "O obstáculo à ação avança a ação. O que está no caminho torna-se o caminho.", stoicSrc: "Marco Aurélio, Meditações", bible: "Sem visão, o povo perece; mas o que guarda a lei esse é bem-aventurado.", bibleRef: "Provérbios 29:18" },
-];
-
 function greetingFor(hour: number) {
   if (hour >= 5 && hour < 12) return "Bom dia";
   if (hour >= 12 && hour < 18) return "Boa tarde";
   return "Boa noite";
 }
 
-function useDailyWelcome() {
-  const [state, setState] = useState<{
-    greeting: string;
-    entry: (typeof DAILY_WISDOM)[number];
-    useStoic: boolean;
-  } | null>(null);
-
+function useGreeting() {
+  const [greeting, setGreeting] = useState<string | null>(null);
   useEffect(() => {
-    const now = new Date();
-    const startOfYear = new Date(now.getFullYear(), 0, 0);
-    const dayOfYear = Math.floor((now.getTime() - startOfYear.getTime()) / 86400000);
-    setState({
-      greeting: greetingFor(now.getHours()),
-      entry: DAILY_WISDOM[dayOfYear % DAILY_WISDOM.length],
-      useStoic: dayOfYear % 2 === 0,
-    });
+    setGreeting(greetingFor(new Date().getHours()));
   }, []);
-
-  return state;
+  return greeting;
 }
 
 const fieldCls =
@@ -90,7 +55,7 @@ async function api(path: string, body?: unknown) {
 }
 
 export default function LoginPage() {
-  const welcome = useDailyWelcome();
+  const greeting = useGreeting();
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -163,23 +128,15 @@ export default function LoginPage() {
       <div className="absolute inset-0 grain-light mask-fade" aria-hidden />
       <div className="absolute inset-0 bp-dots opacity-40" aria-hidden />
 
-      {/* The tekton — a master builder carving a Doric column — bleeding off
-          the right edge, sepia-toned and heavily faded so it reads as
-          texture/atmosphere behind the form, never competing with it. */}
+      {/* Ambient light behind the card instead of a figurative illustration —
+          a soft brand-color glow plus a faint circuit-style grid, the kind
+          of quiet depth a modern auth screen (Vercel/Linear-style) uses. */}
       <div
-        className="pointer-events-none absolute -right-[18%] top-1/2 h-[130%] w-[80%] -translate-y-1/2 opacity-[0.09] mix-blend-multiply sm:opacity-[0.12]"
+        className="pointer-events-none absolute left-1/2 top-[38%] h-[70vh] w-[70vh] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-40 blur-3xl"
+        style={{ background: "radial-gradient(circle, #C93B02 0%, transparent 70%)" }}
         aria-hidden
-      >
-        <Image
-          src="/tekton-illustration.png"
-          alt=""
-          fill
-          sizes="80vw"
-          className="object-contain object-right"
-          style={{ filter: "sepia(0.4) saturate(0.65)" }}
-          priority
-        />
-      </div>
+      />
+      <div className="pointer-events-none absolute inset-0 bp-lines opacity-[0.6] mask-fade" aria-hidden />
 
       <GoldenRibbons className="pointer-events-none absolute left-1/2 top-1/2 h-[140%] w-[140%] -translate-x-1/2 -translate-y-1/2 opacity-70" />
 
@@ -200,25 +157,17 @@ export default function LoginPage() {
             <span className="logo-shimmer" aria-hidden />
           </motion.div>
           <span className="text-lg font-semibold tracking-[0.32em] text-ink">GOLD TRAFFIC</span>
-          <p className="label-tech mt-1.5">goldplanner</p>
+          <p className="label-tech mt-1.5">acesso ao painel</p>
 
-          {welcome && (
-            <motion.div
+          {greeting && (
+            <motion.p
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: EASE }}
-              className="mt-5 max-w-xs"
+              className="mt-5 text-sm text-ink/50"
             >
-              <p className="text-base font-semibold text-ink">
-                {welcome.greeting}, construtor.
-              </p>
-              <p className="text-editorial mt-2 text-[15px] italic leading-snug text-ink/70">
-                &ldquo;{welcome.useStoic ? welcome.entry.stoic : welcome.entry.bible}&rdquo;
-              </p>
-              <p className="mt-1.5 font-mono text-[11px] tracking-wide text-ink/45">
-                — {welcome.useStoic ? welcome.entry.stoicSrc : welcome.entry.bibleRef}
-              </p>
-            </motion.div>
+              {greeting}.
+            </motion.p>
           )}
         </div>
 
@@ -350,7 +299,7 @@ export default function LoginPage() {
                   <span className="text-ink/80">primeiro acesso</span>.
                 </p>
                 <a
-                  href={`mailto:${ADMIN_CONTACT}?subject=Reset%20de%20acesso%20-%20GOLDPLANNER&body=Ol%C3%A1,%20preciso%20redefinir%20minha%20senha%20de%20acesso.`}
+                  href={`mailto:${ADMIN_CONTACT}?subject=Reset%20de%20acesso%20-%20GOLD%20TRAFFIC&body=Ol%C3%A1,%20preciso%20redefinir%20minha%20senha%20de%20acesso.`}
                   className="mt-4 flex items-center gap-2 rounded-lg surface-paper px-4 py-3 text-sm text-ink transition-colors hover:border-green/40"
                 >
                   <Mail size={15} className="text-green" />
