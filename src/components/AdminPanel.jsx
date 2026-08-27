@@ -23,7 +23,7 @@ import { Spinner } from "@/components/ui";
 
 const ONBOARDING_CATEGORY_OPTIONS = ["kickoff", "access", "content", "technical", "design", "training", "launch"];
 const ONBOARDING_OWNER_OPTIONS = [
-  { value: "goldplanner", label: "Gold Planner" },
+  { value: "goldplanner", label: "Gold Traffic" },
   { value: "customer", label: "Cliente" },
 ];
 

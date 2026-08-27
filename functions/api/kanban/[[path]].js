@@ -1,5 +1,5 @@
 /**
- * GOLD PLANNER Kanban API — Cloudflare Pages Function (KV-backed).
+ * GOLD TRAFFIC Kanban API — Cloudflare Pages Function (KV-backed).
  * Ported from the growth worker. Bound to the KANBAN KV namespace.
  *
  * KV keys:
@@ -268,7 +268,7 @@ async function sendEmail(env, { to, subject, text, html, replyTo }) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: env.NOTIFY_FROM || "GOLD PLANNER <notificacoes@goldplanner.clubemkt.digital>",
+      from: env.NOTIFY_FROM || "GOLD TRAFFIC <notificacoes@goldplanner.clubemkt.digital>",
       to,
       subject,
       text,
@@ -327,7 +327,7 @@ function notificationEmail({ authorName, authorEmail, authorHasAvatar, kind, tex
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#efe8dc;padding:32px 16px;"><tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#f8f3ea;border:1px solid rgba(20,22,24,0.08);border-radius:16px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
 <tr><td style="background:#141618;padding:16px 28px;">
-<span style="color:#f8f3ea;font-weight:700;letter-spacing:0.28em;font-size:13px;">GOLD PLANNER</span>
+<span style="color:#f8f3ea;font-weight:700;letter-spacing:0.28em;font-size:13px;">GOLD TRAFFIC</span>
 <span style="color:#C7B79C;font-size:12px;"> &middot; Opera&ccedil;&otilde;es</span>
 </td></tr>
 <tr><td style="padding:28px;">
@@ -342,7 +342,7 @@ ${pill}
 <div style="margin-top:26px;"><a href="${cardUrl}" style="display:inline-block;background:#2E4A43;color:#f8f3ea;font-weight:700;font-size:14px;text-decoration:none;padding:13px 26px;border-radius:10px;">Abrir no quadro &rarr;</a></div>
 </td></tr>
 <tr><td style="padding:18px 28px;border-top:1px solid rgba(20,22,24,0.07);">
-<div style="font-size:11px;color:#8A8579;line-height:1.5;">Voc&ecirc; recebeu este e-mail porque foi marcado em uma tarefa no GOLD PLANNER.</div>
+<div style="font-size:11px;color:#8A8579;line-height:1.5;">Voc&ecirc; recebeu este e-mail porque foi marcado em uma tarefa no GOLD TRAFFIC.</div>
 <a href="https://tasks.goldplanner.clubemkt.digital" style="font-size:11px;color:#2E4A43;text-decoration:none;font-weight:600;">tasks.goldplanner.clubemkt.digital</a>
 </td></tr>
 </table></td></tr></table></body></html>`;
@@ -456,9 +456,9 @@ async function notifyReview(context, env, kv, card, mentioned, members, authUser
   }
 }
 
-// ── Seed data (GOLD PLANNER) ───────────────────────────────────────────────────
+// ── Seed data (GOLD TRAFFIC) ───────────────────────────────────────────────────
 const DEFAULT_CLIENTS = [
-  { id: "goldplanner", name: "GOLD PLANNER", color: "#00E5FF" },
+  { id: "goldplanner", name: "GOLD TRAFFIC", color: "#00E5FF" },
   { id: "parceiro-a", name: "Parceiro A", color: "#C2FF00" },
   { id: "parceiro-b", name: "Parceiro B", color: "#8B5CF6" },
 ];

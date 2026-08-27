@@ -1,4 +1,4 @@
-// Kanban configuration — GOLD PLANNER v2 "Mineral" palette (ancient + tech)
+// Kanban configuration — GOLD TRAFFIC v2 "Mineral" palette (ancient + tech)
 
 export const COLUMNS = [
   { id: "backlog", title: "Backlog", color: "#8A8579" }, // stone

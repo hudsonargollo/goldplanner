@@ -1,7 +1,7 @@
 // Knowledge base for the Business Specialist Copilot — same retrieval
 // pattern as growth/apps/codigo-internacional's worker/src/services/ci/kbService.js
 // (two-tier keyword-overlap scoring: approved FAQ pairs ranked first, then
-// raw source documents), re-scoped to Gold Planner's own service catalog instead
+// raw source documents), re-scoped to Gold Traffic's own service catalog instead
 // of legal source-of-truth material. No FTS5/embeddings here either — same
 // reasoning as the reference: a single company's service catalog is small
 // enough that bounded keyword-overlap scoring is good enough.

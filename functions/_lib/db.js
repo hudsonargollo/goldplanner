@@ -1,4 +1,4 @@
-// D1 `users` table helpers — Phase 1 of the Hub Gold Planner migration (users
+// D1 `users` table helpers — Phase 1 of the Hub Gold Traffic migration (users
 // move wholesale out of KV `auth:users` into D1; see migrations/0001).
 
 export async function getUserByEmail(db, email) {

@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "GOLD PLANNER",
+    "name": "GOLD TRAFFIC",
     "slug": "tasktone",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "tasktone",
     "userInterfaceStyle": "automatic",
-    "backgroundColor": "#efe8dc",
+    "backgroundColor": "#F2F3F5",
     "ios": {
       "bundleIdentifier": "br.com.goldplanner.tasktone"
     },
@@ -39,20 +39,20 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "O GOLD PLANNER usa suas fotos para definir o avatar do seu perfil."
+          "photosPermission": "O GOLD TRAFFIC usa suas fotos para definir o avatar do seu perfil."
         }
       ],
       [
         "expo-media-library",
         {
-          "photosPermission": "O GOLD PLANNER salva os posts gerados na sua galeria quando você exporta.",
-          "savePhotosPermission": "O GOLD PLANNER salva os posts gerados na sua galeria quando você exporta."
+          "photosPermission": "O GOLD TRAFFIC salva os posts gerados na sua galeria quando você exporta.",
+          "savePhotosPermission": "O GOLD TRAFFIC salva os posts gerados na sua galeria quando você exporta."
         }
       ],
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#efe8dc",
+          "backgroundColor": "#F2F3F5",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 140
         }

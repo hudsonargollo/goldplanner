@@ -1,19 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, EB_Garamond, JetBrains_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import MotionProvider from "@/components/MotionProvider";
 
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
+  style: ["normal", "italic"],
   weight: ["400", "500", "600", "700"],
-  display: "swap",
-});
-const ebGaramond = EB_Garamond({
-  subsets: ["latin"],
-  variable: "--font-eb-garamond",
-  style: ["italic"],
-  weight: ["400", "500"],
   display: "swap",
 });
 const jetbrainsMono = JetBrains_Mono({
@@ -25,7 +19,7 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://goldplanner.clubemkt.digital"),
-  title: "GOLD PLANNER — Workflows padrão ouro para sua agência",
+  title: "GOLD TRAFFIC — Workflows padrão ouro para sua agência",
   description:
     "O painel de controle definitivo para profissionais que precisam rastrear tarefas, alinhar a equipe e encantar clientes sem perder horas faturáveis.",
   icons: {
@@ -39,18 +33,18 @@ export const metadata: Metadata = {
   },
   manifest: "/site.webmanifest",
   openGraph: {
-    title: "GOLD PLANNER — A tecnologia certa para qualquer problema da sua empresa",
+    title: "GOLD TRAFFIC — A tecnologia certa para qualquer problema da sua empresa",
     description:
       "Transformamos necessidades empresariais em produtos, sistemas e ativos digitais construídos para gerar eficiência, diferenciação e escala.",
     url: "https://goldplanner.clubemkt.digital",
-    siteName: "GOLD PLANNER",
+    siteName: "GOLD TRAFFIC",
     locale: "pt_BR",
     type: "website",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#141618",
+  themeColor: "#1C1E21",
 };
 
 export const runtime = "edge";
@@ -63,7 +57,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body
-        className={`${inter.variable} ${ebGaramond.variable} ${jetbrainsMono.variable} font-sans antialiased bg-ivory text-ink`}
+        className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased bg-ivory text-ink`}
       >
         <MotionProvider>{children}</MotionProvider>
       </body>

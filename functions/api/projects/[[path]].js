@@ -1,5 +1,5 @@
 // Projects, membership, contracts (self-built click-to-sign), and invoices —
-// Phase 4 of Hub Gold Planner. This is the first module a CUSTOMER-role account
+// Phase 4 of Hub Gold Traffic. This is the first module a CUSTOMER-role account
 // can reach; every route below is scoped by isProjectMember (ADMIN/STAFF
 // implicitly pass, CUSTOMER must have a project_users row for this project).
 //

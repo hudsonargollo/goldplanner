@@ -1,4 +1,4 @@
-// Email-first auth backed by D1 (Phase 1 of the Hub Gold Planner migration — was
+// Email-first auth backed by D1 (Phase 1 of the Hub Gold Traffic migration — was
 // KV `auth:users`, see migrations/0001_hub_users.sql). Response shapes are
 // UNCHANGED from the KV version so the existing frontend needs no edits yet.
 //   POST /api/auth/check    { email }            → { allowed, exists }

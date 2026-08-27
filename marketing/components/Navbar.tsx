@@ -38,7 +38,7 @@ export default function Navbar({
           <motion.div
             aria-hidden
             className="absolute inset-0 backdrop-blur-xl"
-            style={{ opacity: bgOpacity, background: "rgba(26,42,38,0.95)" }}
+            style={{ opacity: bgOpacity, background: "rgba(28,30,33,0.95)" }}
           />
           {/* grain-dark uses mix-blend-mode: screen, which lightens whatever's
               under it — on the brand's Mineral Green (darkened from #2E4A43
@@ -72,14 +72,14 @@ export default function Navbar({
         <a
           href={isLight ? "/" : "#top"}
           className="flex items-center shrink-0 group"
-          aria-label="GOLD PLANNER — início"
+          aria-label="GOLD TRAFFIC — início"
         >
           <span
             className={`font-mono text-sm sm:text-base font-bold tracking-[0.2em] sm:tracking-[0.3em] ${
               isLight ? "text-ink" : "text-ivory"
             }`}
           >
-            GOLD PLANNER
+            GOLD TRAFFIC
           </span>
         </a>
 

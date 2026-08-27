@@ -1,4 +1,4 @@
-// Add-on catalog — Phase 5/6 of Hub Gold Planner (the marketplace's product
+// Add-on catalog — Phase 5/6 of Hub Gold Traffic (the marketplace's product
 // list). GET is public to any authenticated user (CUSTOMER included — this
 // is the storefront). Everything else (create/edit/deactivate) is ADMIN
 // only, per PRD §5.2. ai_banner_url is a client-resized base64 JPEG data URL

@@ -23,7 +23,7 @@ export default function AutoridadeSection() {
       <SectionBlob tone="ochre" className="-left-24 top-10 h-[26rem] w-[26rem]" />
       <div className="relative mx-auto max-w-6xl px-6">
         <h2 className="mb-4 text-3xl font-bold leading-tight tracking-display text-ink sm:text-4xl">
-          Quem lidera a Gold Planner
+          Quem lidera a Gold Traffic
         </h2>
 
         <div className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16 items-start">
@@ -72,7 +72,7 @@ export default function AutoridadeSection() {
               Pedro Silvestrini
             </p>
             <p className="font-mono text-sm tracking-wide text-green">
-              CEO &amp; Fundador da Gold Planner
+              CEO &amp; Fundador da Gold Traffic
             </p>
           </motion.div>
 

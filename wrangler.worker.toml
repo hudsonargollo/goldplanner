@@ -61,7 +61,7 @@ database_id = "305d34fb-a525-45e2-9eb0-67ef552a45b8"
 TASKS_BACKEND = "d1"
 # See wrangler.toml for why this is needed — Resend only has
 # send.goldplanner.clubemkt.digital verified, not the bare domain the code fell back to.
-NOTIFY_FROM = "GOLD PLANNER <notificacoes@send.goldplanner.clubemkt.digital>"
+NOTIFY_FROM = "GOLD TRAFFIC <notificacoes@send.goldplanner.clubemkt.digital>"
 
 [[durable_objects.bindings]]
 name = "BOARD_ROOM"

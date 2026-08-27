@@ -1,4 +1,4 @@
-// Gold Planner · hero scene — a colonnade of stone, golden light and the Mineral T.
+// Gold Traffic · hero scene — a colonnade of stone, golden light and the Mineral T.
 // mountScene(container, opts) -> { destroy() }
 import * as THREE from 'three';
 import { buildMark, MARK_HEIGHT } from './goldplanner-mark.js';

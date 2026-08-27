@@ -1,5 +1,5 @@
 /**
- * GOLD PLANNER realtime broadcast Worker.
+ * GOLD TRAFFIC realtime broadcast Worker.
  *
  * Cloudflare Pages Functions can't define Durable Object classes themselves —
  * only consume one bound from a separately deployed Worker. This tiny Worker

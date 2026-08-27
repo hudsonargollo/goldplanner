@@ -1,4 +1,4 @@
-// Gold Planner · Autoridade — a minimal Greek stele carrying the video.
+// Gold Traffic · Autoridade — a minimal Greek stele carrying the video.
 // Two plain columns on a stylobate with a single lintel across them, and the
 // portrait video filling almost the whole opening between. No pediment, no
 // frieze, no ornament: the screen is the subject, the stone only frames it.

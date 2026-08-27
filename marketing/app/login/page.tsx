@@ -2,7 +2,7 @@
 
 /**
  * Shared front-door login (plan Phase 8) — the one entry point for every
- * Gold Planner account (staff, admin, or customer). Talks to the same compiled
+ * Gold Traffic account (staff, admin, or customer). Talks to the same compiled
  * auth backend every path-mounted product shares (/hub, /portal, /crm all
  * delegate to it — see goldplanner-app's worker/hub-entry.js and siblings), so
  * it doesn't matter which of those three paths this page's fetch calls hit;
@@ -199,7 +199,7 @@ export default function LoginPage() {
             <Logo variant="ink" className="h-full w-full" />
             <span className="logo-shimmer" aria-hidden />
           </motion.div>
-          <span className="text-lg font-semibold tracking-[0.32em] text-ink">GOLD PLANNER</span>
+          <span className="text-lg font-semibold tracking-[0.32em] text-ink">GOLD TRAFFIC</span>
           <p className="label-tech mt-1.5">goldplanner</p>
 
           {welcome && (

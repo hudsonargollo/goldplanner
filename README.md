@@ -1,6 +1,6 @@
-# Gold Planner Hub
+# Gold Traffic Hub
 
-Everything Gold Planner runs on the web, in one repo: the marketing site, staff ops
+Everything Gold Traffic runs on the web, in one repo: the marketing site, staff ops
 (kanban + meeting intelligence + commercial admin), a customer-only portal, and a
 lead-pipeline CRM with an AI copilot — all unified under `goldplanner.clubemkt.digital` with no
 subdomains.
@@ -201,7 +201,7 @@ the `dist/` it deploys would be built with `base: "/hub/"`, which breaks at doma
 
 ## Repo layout
 
-This repo now holds all of Gold Planner's web properties — see
+This repo now holds all of Gold Traffic's web properties — see
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full picture. This app (`/hub`)
 specifically:
 

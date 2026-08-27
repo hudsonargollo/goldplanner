@@ -52,7 +52,7 @@ const phases = [
     n: "Fase 3",
     icon: TrendingUp,
     title: "Transforme sua solução em uma nova receita",
-    body: "Transformamos a tecnologia em um SaaS vendável e escalável. A Gold Planner conduz o crescimento; você participa da receita recorrente e do equity do negócio.",
+    body: "Transformamos a tecnologia em um SaaS vendável e escalável. A Gold Traffic conduz o crescimento; você participa da receita recorrente e do equity do negócio.",
   },
 ];
 
@@ -167,7 +167,7 @@ export default function ProcessoSection() {
           transition={{ duration: 0.5, ease: EASE }}
           className="text-editorial mt-16 text-balance border-l-2 border-green pl-6 text-2xl sm:text-3xl leading-snug text-ink"
         >
-          Por isso, na Gold Planner você não é só um cliente, você é nosso
+          Por isso, na Gold Traffic você não é só um cliente, você é nosso
           parceiro.
         </motion.p>
       </div>

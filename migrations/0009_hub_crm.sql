@@ -1,8 +1,8 @@
--- Phase 9 — CRM: Gold Planner's own lead pipeline and sales tracking, separate
+-- Phase 9 — CRM: Gold Traffic's own lead pipeline and sales tracking, separate
 -- from `projects` (which is post-sale delivery — see plan at
 -- ~/.claude/plans/wise-riding-wirth.md, "Phase 5: Build /crm core"). Pattern
 -- borrowed from growth/apps/codigo-internacional's CI CRM
--- (leads/lead_events/sales), scoped down to what Gold Planner's business actually
+-- (leads/lead_events/sales), scoped down to what Gold Traffic's business actually
 -- needs: no partner/referral system yet (confirmed no affiliates as of now),
 -- so `commissions` is a single-beneficiary ledger (Hudson, 10% per sale),
 -- not a multi-party payout engine — schema stays extensible if that changes.

@@ -9,7 +9,7 @@ import { Spinner } from "@/components/ui";
 // overlay caption via Claude (grounded in brand_kb voice + positioning —
 // see socialPostService.js's generateCaption). Backend: functions/api/social/[[path]].js.
 //
-// Compositing (the caption band + Gold Planner watermark burned onto the raw
+// Compositing (the caption band + Gold Traffic watermark burned onto the raw
 // SDXL image) moved server-side (see worker/lib/socialCompositor.js) so
 // mobile doesn't need to duplicate this app's old <canvas> post-processing
 // step with a heavy RN canvas dependency — both platforms now just display

@@ -31,12 +31,12 @@ export default async function BlogIndexPage() {
         <div className="absolute inset-0 grain-light mask-fade" aria-hidden />
         <div className="relative mx-auto max-w-5xl px-6">
           <div className="mb-14">
-            <p className="label-tech mb-4">Gold Planner · Arquivo</p>
+            <p className="label-tech mb-4">Gold Traffic · Arquivo</p>
             <h1 className="text-balance text-4xl sm:text-5xl font-bold leading-tight tracking-display text-ink">
               Notas de um construtor.
             </h1>
             <p className="mt-4 max-w-xl text-pretty text-lg leading-relaxed text-ink/60">
-              Sistemas, produtos e as decisões por trás de como a Gold Planner constrói.
+              Sistemas, produtos e as decisões por trás de como a Gold Traffic constrói.
             </p>
           </div>
 

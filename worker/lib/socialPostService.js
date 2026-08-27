@@ -1,5 +1,5 @@
 /**
- * AI Instagram Post Generator (Gold Planner Hub AI Instagram Post Generator PRD,
+ * AI Instagram Post Generator (Gold Traffic Hub AI Instagram Post Generator PRD,
  * 2026-08-12) — generates a brand-aligned image via Cloudflare Workers AI,
  * stores it in R2, and logs the exact prompt used. See
  * functions/api/social/[[path]].js for the HTTP layer and
@@ -93,7 +93,7 @@ async function generateImage(env, prompt) {
  * Drafts the short overlay line rendered onto the image (canvas step in
  * SocialPostGenerator.jsx), grounded in brand_kb's voice + the positioning
  * angle matched to the chosen objective — so it stays concise and on the
- * actual Gold Planner sales proposition instead of a blank field the human has
+ * actual Gold Traffic sales proposition instead of a blank field the human has
  * to fill in from scratch every time. Best-effort: caption generation must
  * never block or fail image generation, so any error here just falls back
  * to null (the human can still type their own overlay text, same as before
@@ -108,9 +108,9 @@ async function generateCaption(env, { objective, subject, brandKb }) {
     const positioning = brandKb.find((r) => r.category === "positioning" && r.title === positioningTitle)?.content;
     const objectiveLabel = OBJECTIVE_LABELS[objective] || objective;
 
-    const prompt = `Você escreve legendas curtas de overlay para posts de Instagram da Gold Planner, uma consultoria de tecnologia e negócios sob medida (não é agência, não é software house, não é fábrica de apps).
+    const prompt = `Você escreve legendas curtas de overlay para posts de Instagram da Gold Traffic, uma consultoria de tecnologia e negócios sob medida (não é agência, não é software house, não é fábrica de apps).
 
-Voz da marca: "${voiceLine || "Gold Planner fala devagar. Nunca grita. Quando precisa cortar, corta com clareza."}"
+Voz da marca: "${voiceLine || "Gold Traffic fala devagar. Nunca grita. Quando precisa cortar, corta com clareza."}"
 Objetivo deste post: ${objectiveLabel}.${positioning ? ` Proposta de negócio / posicionamento a reforçar: ${positioning}` : ""}
 Assunto/contexto da imagem: ${subject}
 

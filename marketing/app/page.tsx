@@ -34,7 +34,7 @@ export default function Home() {
               {
                 icon: "🗂️",
                 title: "Templates de Workflow",
-                description: "Padronize suas entregas usando os templates de fluxo de trabalho do GOLD PLANNER.",
+                description: "Padronize suas entregas usando os templates de fluxo de trabalho do GOLD TRAFFIC.",
               },
               {
                 icon: "🎙️",
@@ -52,14 +52,14 @@ export default function Home() {
 
         <section id="depoimentos">
           <h2 className="mb-6 text-2xl font-bold tracking-tight text-ink">
-            Junte-se a agências de elite que já escalam com o GOLD PLANNER.
+            Junte-se a agências de elite que já escalam com o GOLD TRAFFIC.
           </h2>
           <TestimonialBlock
             props={{
               items: [
                 {
                   quote:
-                    "Desde que centralizamos tudo no GOLD PLANNER, nossa produtividade como equipe deu um salto — nada mais se perde entre e-mail, WhatsApp e planilha.",
+                    "Desde que centralizamos tudo no GOLD TRAFFIC, nossa produtividade como equipe deu um salto — nada mais se perde entre e-mail, WhatsApp e planilha.",
                   name: "[Depoimento a definir]",
                   role: "[Cargo/Agência]",
                 },

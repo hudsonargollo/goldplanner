@@ -39,7 +39,7 @@ export default function BlogGrid({ posts }: { posts: Post[] }) {
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-sand/30 to-green/10">
-                <span className="label-tech">Gold Planner</span>
+                <span className="label-tech">Gold Traffic</span>
               </div>
             )}
           </div>

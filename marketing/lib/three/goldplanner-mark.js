@@ -1,4 +1,4 @@
-// Gold Planner · Mineral T — three structural layers: architrave, pillar, foundation.
+// Gold Traffic · Mineral T — three structural layers: architrave, pillar, foundation.
 // Proportions traced from the flat mark (architrave width = 0.600 m base unit).
 import * as THREE from 'three';
 

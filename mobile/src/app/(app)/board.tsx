@@ -138,7 +138,7 @@ export default function BoardScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={["top"]}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>GOLD PLANNER</Text>
+        <Text style={styles.headerTitle}>GOLD TRAFFIC</Text>
         <Pressable onPress={() => router.push("/wizard")} style={styles.newBtn}>
           <Plus size={14} color={colors.clay} />
           <Text style={styles.newBtnText}>Nova tarefa</Text>

@@ -59,7 +59,7 @@ const ONBOARDING_CATEGORY_OPTIONS: PickerOption[] = [
   { value: "launch", label: "launch" },
 ];
 const ONBOARDING_OWNER_OPTIONS: PickerOption[] = [
-  { value: "goldplanner", label: "Gold Planner" },
+  { value: "goldplanner", label: "Gold Traffic" },
   { value: "customer", label: "Cliente" },
 ];
 
@@ -546,7 +546,7 @@ function OnboardingTab({ onError }: { onError: (e: string) => void }) {
                             onPress={() => setNewOwner((o) => (o === "goldplanner" ? "customer" : "goldplanner"))}
                             style={styles.ownerToggle}
                           >
-                            <Text style={styles.ownerToggleText}>{newOwner === "goldplanner" ? "Gold Planner" : "Cliente"}</Text>
+                            <Text style={styles.ownerToggleText}>{newOwner === "goldplanner" ? "Gold Traffic" : "Cliente"}</Text>
                           </Pressable>
                           <Pressable
                             onPress={() => addStep(p.id)}

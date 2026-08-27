@@ -1,4 +1,4 @@
-// Internal financial tracking — Phase 3/3.5 of Hub Gold Planner. STAFF/ADMIN
+// Internal financial tracking — Phase 3/3.5 of Hub Gold Traffic. STAFF/ADMIN
 // only, gated by rbac.hasFinanceAccess (ADMIN always; STAFF only if an
 // admin has explicitly turned on their finance_authorized flag). Strictly
 // separate from anything a CUSTOMER role could ever reach — no

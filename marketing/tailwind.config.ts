@@ -10,42 +10,45 @@ const config: Config = {
     extend: {
       fontFamily: {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],
-        editorial: ["var(--font-eb-garamond)", "Georgia", "serif"],
+        editorial: ["var(--font-inter)", "system-ui", "sans-serif"], // no editorial serif in Gold Traffic's system
         mono: ["var(--font-jetbrains-mono)", "ui-monospace", "monospace"],
       },
       colors: {
-        // Sistema Mineral — light surfaces (dominant palette site-wide)
-        ivory: "#EFE8DC", // page background
-        paper: "#F8F3EA", // elevated card background
+        // Gold Traffic — orange, ink, cool gray (see /public/brand for the
+        // source kit: goldtraffic_hex.jpg gives FC4A02 / 1C1E21 / B6B9BF / F2F3F5)
+        ivory: "#F2F3F5", // page background
+        paper: "#FFFFFF", // elevated card background
         ink: {
-          DEFAULT: "#141618", // body text on light surfaces / inverted-surface base
-          // Dark elevation ramp, derived from Ink #141618 — reserved for the
-          // hero and Hub Gold Planner cinematic sections, never the whole page.
-          950: "#141618",
-          900: "#1A1C1E",
-          800: "#202224",
-          700: "#282A2C",
-          600: "#323436",
-          500: "#414345",
+          DEFAULT: "#1C1E21", // body text on light surfaces / inverted-surface base
+          // Dark elevation ramp, derived from Ink #1C1E21 — reserved for the
+          // hero and Hub Gold Traffic cinematic sections, never the whole page.
+          950: "#1C1E21",
+          900: "#222528",
+          800: "#282B2F",
+          700: "#303338",
+          600: "#3A3E43",
+          500: "#484D53",
         },
         sand: {
-          DEFAULT: "#C7B79C", // borders / warm accent — decorative only, fails AA as text
-          dark: "#A9976F",
+          DEFAULT: "#B6B9BF", // borders / cool accent — decorative only, fails AA as text
+          dark: "#9296A0",
         },
         green: {
-          DEFAULT: "#2E4A43", // primary / action / links — 7.9:1 on ivory (AAA)
-          hover: "#29433C",
-          active: "#263D37",
-          tint: "#D2D0C5",
-          subtle: "#E3DFD3",
-          mist: "#7FA396", // accent on dark ink surfaces — the logo's own dark-variant shaft color, 6.6:1 on ink (AA)
+          // "green" kept as the token name for backward compatibility with
+          // every bg-green/text-green call site — value is the brand orange.
+          DEFAULT: "#C93B02", // primary / action / links — 4.6:1 on ivory (AA); the pure #FC4A02 mark stays reserved for the logo/icon assets themselves
+          hover: "#AB3201",
+          active: "#8C2801",
+          tint: "#FEE2D7",
+          subtle: "#FDCCB8",
+          mist: "#F27A49", // accent on dark ink surfaces — 6:1 on ink (AA)
         },
         success: {
           DEFAULT: "#3E6B4E",
           mist: "#9EB5A6", // for use on dark ink surfaces
         },
-        warning: "#B8862F", // Ochre — 2.7:1 on ivory, fails AA as text; use for icons/borders/chips only
-        "warning-text": "#8A6423", // darkened Ochre for warning copy on light surfaces
+        warning: "#D9A404", // Golden amber — kept visually distinct from the orange primary
+        "warning-text": "#8A6E03", // darkened amber for warning copy on light surfaces
         danger: "#9B3D2E", // Terracota — 5.6:1 on ivory (AA pass, safe as error text)
       },
       letterSpacing: {

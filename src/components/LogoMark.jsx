@@ -1,57 +1,19 @@
-// GOLD PLANNER mark — the flat "adaptive-foreground" geometry from the delivered
-// 3D icon system (delivery/appicons/_src/adaptive-foreground.svg), the same
-// artwork used for the app icon everywhere. Replaces an earlier hand-coded
-// approximation that had drifted from the real brand mark.
+// GOLD TRAFFIC mark — the speech-bubble/arrow icon from the brand kit
+// (Ícone/Vector.svg), reproduced at its native path geometry.
 
-export default function LogoMark({ className = "", title = "GOLD PLANNER" }) {
+export default function LogoMark({ className = "", title = "GOLD TRAFFIC", color = "#FC4A02" }) {
   return (
     <svg
-      viewBox="0 0 432 432"
+      viewBox="0 0 1613 1607"
       className={className}
       role="img"
       aria-label={title}
       xmlns="http://www.w3.org/2000/svg"
     >
-      <defs>
-        <linearGradient id="tk-sand" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#E4D9C3" />
-          <stop offset=".55" stopColor="#C7B79C" />
-          <stop offset="1" stopColor="#A29174" />
-        </linearGradient>
-        <linearGradient id="tk-ink" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#2C3238" />
-          <stop offset=".5" stopColor="#171A1D" />
-          <stop offset="1" stopColor="#0A0C0D" />
-        </linearGradient>
-        <linearGradient id="tk-green" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#456B60" />
-          <stop offset="1" stopColor="#20342E" />
-        </linearGradient>
-        <linearGradient id="tk-flute" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#D3DCD8" />
-          <stop offset="1" stopColor="#8B9C96" />
-        </linearGradient>
-        <linearGradient id="tk-shadow" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#000" stopOpacity=".45" />
-          <stop offset="1" stopColor="#000" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <g transform="translate(216 216) scale(0.3024) translate(-300 -274)">
-        <rect x="0" y="0" width="600" height="147" rx="6" fill="url(#tk-sand)" />
-        <rect x="0" y="0" width="600" height="5" rx="2.5" fill="#F6EEDD" opacity=".65" />
-        <path d="M17 17H583V130H381.4V112.9H364.3V484H235.7V112.9H218.6V130H17Z" fill="url(#tk-ink)" />
-        <rect x="17" y="17" width="566" height="16" fill="url(#tk-shadow)" />
-        <rect x="241.7" y="147" width="13.8" height="337" rx="1.5" fill="url(#tk-green)" />
-        <rect x="241.7" y="147" width="3" height="337" fill="#5C877A" opacity=".55" />
-        <rect x="344.5" y="147" width="13.8" height="337" rx="1.5" fill="url(#tk-green)" />
-        <rect x="344.5" y="147" width="3" height="337" fill="#5C877A" opacity=".55" />
-        <rect x="297" y="165" width="6" height="293" rx="2" fill="url(#tk-flute)" />
-        <rect x="162.5" y="484" width="275" height="30.6" rx="2" fill="url(#tk-sand)" />
-        <rect x="162.5" y="484" width="275" height="3" fill="#F0E6D3" opacity=".55" />
-        <rect x="130" y="514.6" width="340" height="23.3" rx="1.5" fill="url(#tk-ink)" />
-        <rect x="68.5" y="537.9" width="463" height="7.3" rx="1" fill="#15181A" />
-        <rect x="128.5" y="545.2" width="343" height="2.4" fill="#BCAB90" />
-      </g>
+      <path
+        d="M1046.7 161.07C1046.7 155.278 1043.96 149.815 1039.26 146.43C779.808 -40.4304 400.831 -54.0925 203.342 138.095C-58.9207 393.317 -94.1816 899.089 257.762 1267.04L86.7343 1458.94C75.1779 1471.9 90.4282 1491.15 105.695 1482.87L347.56 1351.65C823.779 1751.48 1630.88 1717.04 1612.43 995.313V296.903C1612.43 249.81 1574.25 211.633 1527.16 211.633H1155.77C1139.59 211.633 1133.43 234.726 1147.05 243.439C1193.78 273.322 1248.14 313.163 1286.6 349.664C1292.76 355.51 1292.72 365.238 1286.73 371.257L679.79 981.121C666.807 994.166 683.337 1014.94 698.963 1005.21L1420.21 556.398C1427.84 551.653 1437.89 554.333 1441.95 562.343C1534.13 744.059 1599.08 1019.38 1434.94 1179.12C1248.07 1360.97 890.886 1297.01 637.141 1036.27C383.397 775.524 329.182 416.731 516.048 234.881C637.441 116.746 830.712 102.345 1020.81 178.24C1033.08 183.138 1046.7 174.281 1046.7 161.07Z"
+        fill={color}
+      />
     </svg>
   );
 }

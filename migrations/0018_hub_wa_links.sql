@@ -5,7 +5,7 @@
 -- click before bouncing. Schema mirrors Código Internacional's own
 -- ci_wa_links/ci_wa_numbers (migrations 0022/0023/0036/0037 in their repo),
 -- collapsed into one final shape here instead of replaying their ALTER
--- history — Gold Planner's version never had the whatsapp-only starting shape.
+-- history — Gold Traffic's version never had the whatsapp-only starting shape.
 CREATE TABLE IF NOT EXISTS wa_links (
   slug            TEXT PRIMARY KEY,
   title           TEXT,

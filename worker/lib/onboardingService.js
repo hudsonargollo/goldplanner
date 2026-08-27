@@ -169,7 +169,7 @@ function buildAiPrompt({ lead, projectType, brief }) {
     .filter(Boolean)
     .join("\n") || "(sem perfil adicional além do brief abaixo)";
 
-  return `Você monta o checklist de onboarding de um cliente que acabou de fechar contrato com a Gold Planner (estúdio que constrói produtos, sites e sistemas digitais sob medida).
+  return `Você monta o checklist de onboarding de um cliente que acabou de fechar contrato com a Gold Traffic (estúdio que constrói produtos, sites e sistemas digitais sob medida).
 
 PERFIL DO CLIENTE E DO PROJETO:
 ${profile}
@@ -177,7 +177,7 @@ ${profile}
 DIRETRIZES ESCRITAS PELO CLOSER SOBRE ESTE PROJETO ESPECÍFICO:
 ${brief}
 
-Gere uma lista de etapas de onboarding adaptada a ESTE projeto específico — use as diretrizes acima para decidir quais etapas fazem sentido, pule etapas óbvias que as diretrizes já resolvem (ex: se o cliente já tem catálogo pronto, não peça o catálogo), e adicione etapas específicas que as diretrizes sugerem. Cada etapa tem um responsável: "goldplanner" (a equipe da Gold Planner executa) ou "customer" (o cliente precisa fazer ou entregar algo). Categorize cada etapa em uma destas categorias: ${CATEGORY_VALUES.join(", ")}. Estime dueOffsetDays (dias corridos a partir de hoje) para cada etapa, em ordem crescente e realista.
+Gere uma lista de etapas de onboarding adaptada a ESTE projeto específico — use as diretrizes acima para decidir quais etapas fazem sentido, pule etapas óbvias que as diretrizes já resolvem (ex: se o cliente já tem catálogo pronto, não peça o catálogo), e adicione etapas específicas que as diretrizes sugerem. Cada etapa tem um responsável: "goldplanner" (a equipe da Gold Traffic executa) ou "customer" (o cliente precisa fazer ou entregar algo). Categorize cada etapa em uma destas categorias: ${CATEGORY_VALUES.join(", ")}. Estime dueOffsetDays (dias corridos a partir de hoje) para cada etapa, em ordem crescente e realista.
 
 Responda APENAS com JSON válido (sem markdown, sem texto fora do JSON):
 {

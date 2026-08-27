@@ -1,4 +1,4 @@
-// AI Instagram Post Generator (Gold Planner Hub AI Instagram Post Generator
+// AI Instagram Post Generator (Gold Traffic Hub AI Instagram Post Generator
 // PRD, 2026-08-12) — internal content tool, STAFF/ADMIN only via the
 // existing session-cookie auth (the PRD's "Secret API Key" framing
 // assumed a standalone public worker; this lives inside the

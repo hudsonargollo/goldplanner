@@ -1,8 +1,8 @@
 /**
- * GOLD PLANNER — Meeting-notes → Kanban sync (Google Apps Script)
+ * GOLD TRAFFIC — Meeting-notes → Kanban sync (Google Apps Script)
  *
  * Scans Google Drive for new Gemini meeting-notes Docs and POSTs their text to
- * the GOLD PLANNER ingest endpoint, which parses "Próximas etapas" into cards.
+ * the GOLD TRAFFIC ingest endpoint, which parses "Próximas etapas" into cards.
  *
  * SETUP
  *   1. Open https://script.google.com → New project, paste this file.
@@ -36,11 +36,11 @@ const CONFIG = {
 
   // How to locate the notes Docs:
   //   FOLDER_ID empty  → search every Doc this account can see (owned or
-  //                       shared) by title (GOLD PLANNER default).
+  //                       shared) by title (GOLD TRAFFIC default).
   //   FOLDER_ID set     → scan that specific Drive folder you own instead.
   FOLDER_ID: "",
   // Title filter for the default search. "Anotações" matches every Gemini
-  // notes Doc; narrow it (e.g. "Daily time Gold Planner") if you want only
+  // notes Doc; narrow it (e.g. "Daily time Gold Traffic") if you want only
   // certain meetings. Ignored when FOLDER_ID is set.
   NAME_CONTAINS: "Anotações",
 

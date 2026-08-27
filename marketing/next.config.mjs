@@ -29,7 +29,7 @@ export default withNextVideo(nextConfig, {
   provider: "cloudflare-r2",
   providerConfig: {
     "cloudflare-r2": {
-      // R2's S3-compatible API endpoint, scoped to the GOLD PLANNER Cloudflare
+      // R2's S3-compatible API endpoint, scoped to the GOLD TRAFFIC Cloudflare
       // account (193882a3226d5fb9c3611ea50c95992e) — required by the S3
       // client next-video uses under the hood; without it, uploads fail.
       endpoint: "https://193882a3226d5fb9c3611ea50c95992e.r2.cloudflarestorage.com",

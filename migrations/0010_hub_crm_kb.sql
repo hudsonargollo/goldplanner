@@ -1,6 +1,6 @@
 -- Phase 10 — Business Specialist Copilot's knowledge base + question log
 -- (plan Phase 7). Same shape as growth/apps/codigo-internacional's CI CRM
--- (kb_documents + customer_questions), re-scoped: Gold Planner's own service
+-- (kb_documents + customer_questions), re-scoped: Gold Traffic's own service
 -- catalog / pricing / case studies instead of legal source-of-truth
 -- material, and grounded in a lead's profile instead of a live-call
 -- transcript. Starts EMPTY — needs Hudson's real service-catalog content

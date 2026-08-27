@@ -42,14 +42,14 @@ service account, no API enablement, no billing**. You only need:
   teammate shares with it and notes it owns because it hosted the call itself
   (Gemini saves those straight to the host's own Drive, which never shows up
   in that account's own "Shared with me"). Run it under whichever account is
-  most likely to be a participant in GOLD PLANNER meetings.
+  most likely to be a participant in GOLD TRAFFIC meetings.
 - **An Apps Script project** (free, lives in that Google account).
 - **One-time authorization.** The first run prompts for three auto-detected scopes
   — Drive (read), External requests (`UrlFetchApp`), and Triggers. You'll also see a
   "Google hasn't verified this app" screen; click **Advanced → Go to project → Allow**
   (normal for a personal script).
 - **Gemini note-taking enabled** in Workspace — that's what produces the Docs in the
-  first place (already the case at GOLD PLANNER).
+  first place (already the case at GOLD TRAFFIC).
 
 ## One-time setup
 
@@ -86,8 +86,8 @@ email them. This uses **Resend** — sign in/create the key with the project's
 `goldplanner.clubemkt.digital`, via DNS records in Cloudflare). Then:
 ```sh
 echo "re_xxx" | npx wrangler pages secret put RESEND_API_KEY --project-name goldplanner-app
-# optional sender override (defaults to "GOLD PLANNER <notificacoes@goldplanner.clubemkt.digital>")
-echo "GOLD PLANNER <notificacoes@goldplanner.clubemkt.digital>" | npx wrangler pages secret put NOTIFY_FROM --project-name goldplanner-app
+# optional sender override (defaults to "GOLD TRAFFIC <notificacoes@goldplanner.clubemkt.digital>")
+echo "GOLD TRAFFIC <notificacoes@goldplanner.clubemkt.digital>" | npx wrangler pages secret put NOTIFY_FROM --project-name goldplanner-app
 ```
 Redeploy. Without `RESEND_API_KEY` the in-app bell still works; email is simply skipped.
 
@@ -111,11 +111,11 @@ pick which to import. Already-imported docs are flagged and skipped (no duplicat
    - `ENDPOINT` — already set to `https://tasks.goldplanner.clubemkt.digital/api/ingest/meeting-notes`.
    - `INGEST_TOKEN` — the **same** value from step 1.
    - **Where it looks for the Docs:**
-     - *Default (GOLD PLANNER):* leave `FOLDER_ID` empty. The script searches every Doc
+     - *Default (GOLD TRAFFIC):* leave `FOLDER_ID` empty. The script searches every Doc
        the account can see — owned or shared — whose title contains
        `NAME_CONTAINS` (default `"Anotações"`), so it catches meetings this account
        hosted itself as well as ones a teammate shared with it. Narrow
-       `NAME_CONTAINS` (e.g. `"Daily time Gold Planner"`) if you only want specific
+       `NAME_CONTAINS` (e.g. `"Daily time Gold Traffic"`) if you only want specific
        meetings.
      - *Alternative:* set `FOLDER_ID` to a folder you own to scan just that folder
        (ID = last segment of the folder URL `…/folders/<FOLDER_ID>`).
@@ -163,6 +163,6 @@ pick which to import. Already-imported docs are flagged and skipped (no duplicat
 curl -X POST https://tasks.goldplanner.clubemkt.digital/api/ingest/meeting-notes \
   -H "Authorization: Bearer $INGEST_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"title":"Daily Gold Planner","date":"2026-06-22","text":"Resumo do projeto \"Código Internacional\".\n\nPróximas etapas\n[Hudson Argollo] Subir VSL: Publicar o arquivo.\n[The group] Melhorar VSL: Listar pontos.\n\nDetalhes\n..."}'
+  -d '{"title":"Daily Gold Traffic","date":"2026-06-22","text":"Resumo do projeto \"Código Internacional\".\n\nPróximas etapas\n[Hudson Argollo] Subir VSL: Publicar o arquivo.\n[The group] Melhorar VSL: Listar pontos.\n\nDetalhes\n..."}'
 ```
 Returns the project, which tasks were `created`, and which were `skipped`.

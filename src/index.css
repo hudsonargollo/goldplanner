@@ -1,31 +1,31 @@
 @import "tailwindcss";
 
-/* ── GOLD PLANNER v2 · Mineral system ─────────────────────────────────────────────
-   Ancient + tech. Ivory base, mineral black, deep green, sand.
-   Type: Inter (display) · EB Garamond italic (editorial/Latin) · JetBrains Mono (UI)
+/* ── GOLD TRAFFIC system ───────────────────────────────────────────────────
+   Orange, ink, and cool gray. Clean, flat, commercial.
+   Type: Inter (display/body) · JetBrains Mono (UI labels)
    Fonts loaded via <link> in index.html.
 ------------------------------------------------------------------------------ */
 
 @theme {
   --font-sans: "Inter", system-ui, -apple-system, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
-  --font-serif: "EB Garamond", Georgia, serif;
+  --font-serif: "Inter", system-ui, sans-serif; /* no editorial serif in this system */
 
-  /* Mineral palette */
-  --color-clay: #efe8dc; /* Ivory Clay — dominant base */
-  --color-paper: #f8f3ea; /* raised card */
-  --color-ink: #141618; /* Mineral Black — text/structure */
-  --color-green: #2e4a43; /* Mineral Green — primary accent */
-  --color-sand: #c7b79c; /* Mineral Sand — secondary accent */
+  /* Gold Traffic palette */
+  --color-clay: #f2f3f5; /* page background */
+  --color-paper: #ffffff; /* raised card */
+  --color-ink: #1c1e21; /* text/structure */
+  --color-green: #c93b02; /* primary accent — deepened brand orange, AA-safe with light text on fills; see public/brand for the pure #FC4A02 mark */
+  --color-sand: #b6b9bf; /* secondary accent / borders */
 
-  /* action = green (so existing bg-action/text-action map to brand green) */
-  --color-action: #2e4a43;
-  --color-pillar: #c7b79c;
+  /* action = green (so existing bg-action/text-action map to brand orange) */
+  --color-action: #c93b02;
+  --color-pillar: #b6b9bf;
 
-  /* Semantic state lexicon (earthy) */
+  /* Semantic state lexicon */
   --color-success: #3e6b4e;
-  --color-danger: #9b3d2e; /* terracotta */
-  --color-warning: #b8862f; /* ochre */
+  --color-danger: #9b3d2e;
+  --color-warning: #d9a404; /* golden amber — kept visually distinct from the orange primary */
 }
 
 /* ── Base ───────────────────────────────────────────────────────────────────── */
@@ -55,34 +55,34 @@ body {
 /* ── Elevation surfaces (light, warm) ───────────────────────────────────────── */
 .surface-1 {
   /* recessed (column drop zones) */
-  background-color: #e9e1d2;
-  border: 1px solid rgba(20, 22, 24, 0.07);
+  background-color: #E8EAED;
+  border: 1px solid rgba(28, 30, 33, 0.07);
 }
 .surface-2 {
   /* raised card */
-  background-color: #f8f3ea;
-  border: 1px solid rgba(20, 22, 24, 0.1);
-  box-shadow: 0 1px 2px rgba(20, 22, 24, 0.04);
+  background-color: #FFFFFF;
+  border: 1px solid rgba(28, 30, 33, 0.1);
+  box-shadow: 0 1px 2px rgba(28, 30, 33, 0.04);
 }
 .surface-3 {
   /* nested control */
-  background-color: #fcf9f2;
-  border: 1px solid rgba(20, 22, 24, 0.1);
+  background-color: #FAFBFC;
+  border: 1px solid rgba(28, 30, 33, 0.1);
 }
 
 .glass {
-  background: rgba(239, 232, 220, 0.78);
+  background: rgba(242, 243, 245, 0.82);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(20, 22, 24, 0.08);
+  border: 1px solid rgba(28, 30, 33, 0.08);
 }
 
 /* ── Accent treatments (soft, editorial — no neon glow) ─────────────────────── */
 .ring-action {
-  box-shadow: 0 0 0 1px rgba(46, 74, 67, 0.3), 0 1px 3px rgba(20, 22, 24, 0.08);
+  box-shadow: 0 0 0 1px rgba(201, 59, 2, 0.3), 0 1px 3px rgba(28, 30, 33, 0.08);
 }
 .glow-action {
-  box-shadow: 0 2px 12px rgba(46, 74, 67, 0.2);
+  box-shadow: 0 2px 12px rgba(201, 59, 2, 0.2);
 }
 
 /* MSN-nudge-style jolt when someone pings you */
@@ -128,12 +128,12 @@ body {
 
 /* ── Blueprint backdrop (subtle, dark-on-cream) ─────────────────────────────── */
 .bp-dots {
-  background-image: radial-gradient(circle, rgba(20, 22, 24, 0.06) 1px, transparent 1px);
+  background-image: radial-gradient(circle, rgba(28, 30, 33, 0.06) 1px, transparent 1px);
   background-size: 30px 30px;
 }
 .bp-lines {
-  background-image: linear-gradient(to right, rgba(20, 22, 24, 0.045) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(20, 22, 24, 0.045) 1px, transparent 1px);
+  background-image: linear-gradient(to right, rgba(28, 30, 33, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(28, 30, 33, 0.045) 1px, transparent 1px);
   background-size: 60px 60px;
 }
 
@@ -146,15 +146,15 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(20, 22, 24, 0.16);
+  background: rgba(28, 30, 33, 0.16);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(46, 74, 67, 0.5);
+  background: rgba(201, 59, 2, 0.5);
 }
 ::selection {
-  background: rgba(46, 74, 67, 0.18);
-  color: #141618;
+  background: rgba(201, 59, 2, 0.18);
+  color: #1C1E21;
 }
 
 /* Date input calendar icon — keep dark on light */

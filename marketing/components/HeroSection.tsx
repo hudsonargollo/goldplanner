@@ -31,7 +31,7 @@ const headWords = [
   { t: "sua" },
   { t: "empresa." },
   { t: "A", hl: true },
-  { t: "Gold Planner", hl: true },
+  { t: "Gold Traffic", hl: true },
   { t: "constrói", hl: true },
   { t: "essa", hl: true },
   { t: "solução.", hl: true },
@@ -54,7 +54,7 @@ const headWord: Variants = {
   },
 };
 
-// Mounts the Gold Planner 3D hero scene (lib/three/goldplanner-scene.js) as a
+// Mounts the Gold Traffic 3D hero scene (lib/three/goldplanner-scene.js) as a
 // full-bleed background layer behind the existing copy. Dynamic-imported
 // inside this effect (which only ever runs client-side) rather than via
 // next/dynamic's ssr:false wrapper — this component is already "use

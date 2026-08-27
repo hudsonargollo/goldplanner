@@ -2,8 +2,8 @@
 // dashboard. Stage/tier colors reference the SAME design tokens
 // index.css's @theme block defines (sand/action/success/danger/warning)
 // instead of hardcoded hex or borrowed hues from Código Internacional's
-// own board — every color here is one already in Gold Planner's brand system,
-// so the board always stays bound to Gold Planner's own palette.
+// own board — every color here is one already in Gold Traffic's brand system,
+// so the board always stays bound to Gold Traffic's own palette.
 export const LEAD_STATUSES = [
   { key: "new", label: "Novo", color: "var(--color-sand)" },
   { key: "contacted", label: "Contatado", color: "var(--color-warning)" },

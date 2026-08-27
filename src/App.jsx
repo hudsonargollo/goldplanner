@@ -535,7 +535,7 @@ export default function App() {
           <span className="hidden h-6 w-px shrink-0 bg-ink/15 sm:block" aria-hidden="true" />
           <span className="hidden flex-col leading-none sm:flex">
             <span className="text-sm font-semibold tracking-[0.28em] text-ink sm:tracking-[0.3em]">
-              GOLD PLANNER
+              GOLD TRAFFIC
             </span>
           </span>
         </div>
@@ -938,7 +938,7 @@ export default function App() {
                 <span className="flex items-center gap-2">
                   <LogoMark className="h-6 w-auto" />
                   <span className="flex flex-col leading-none">
-                    <span className="font-semibold tracking-[0.2em] text-ink">GOLD PLANNER</span>
+                    <span className="font-semibold tracking-[0.2em] text-ink">GOLD TRAFFIC</span>
                   </span>
                 </span>
                 <button

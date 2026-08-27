@@ -16,9 +16,9 @@ self.addEventListener("push", (event) => {
   try {
     payload = event.data ? event.data.json() : {};
   } catch {
-    payload = { title: "GOLD PLANNER", body: event.data ? event.data.text() : "" };
+    payload = { title: "GOLD TRAFFIC", body: event.data ? event.data.text() : "" };
   }
-  const { title = "GOLD PLANNER", body = "", cardId } = payload;
+  const { title = "GOLD TRAFFIC", body = "", cardId } = payload;
 
   event.waitUntil(
     self.registration.showNotification(title, {

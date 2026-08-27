@@ -20,9 +20,9 @@ const uid = () => crypto.randomUUID().replace(/-/g, "").slice(0, 12);
 const ILLUSTRATION_STYLE =
   "Ancient Greek copper-engraving illustration, classical black-figure vase painting style fused with fine antique line engraving, single warm sepia-ink color, aged parchment background, elegant minimal linework, symmetrical balanced composition, no text, no modern elements, no color beyond sepia and parchment tones.";
 
-const DRAFT_PERSONA = `Você é o redator-chefe do blog da Gold Planner — uma consultoria de tecnologia e negócios que constrói produtos, sistemas e ativos digitais sob medida para empresários que quiseram recuperar tempo, transformar uma ideia em realidade, ou destravar mais potencial dentro do próprio negócio.
+const DRAFT_PERSONA = `Você é o redator-chefe do blog da Gold Traffic — uma consultoria de tecnologia e negócios que constrói produtos, sistemas e ativos digitais sob medida para empresários que quiseram recuperar tempo, transformar uma ideia em realidade, ou destravar mais potencial dentro do próprio negócio.
 
-Voz da marca (do guia oficial): "Gold Planner fala devagar. Nunca grita. Quando precisa cortar, corta com clareza." — direto, consultivo, nunca promocional, nunca genérico. Cada artigo precisa ensinar algo específico e acionável, nunca conteúdo raso de preenchimento.`;
+Voz da marca (do guia oficial): "Gold Traffic fala devagar. Nunca grita. Quando precisa cortar, corta com clareza." — direto, consultivo, nunca promocional, nunca genérico. Cada artigo precisa ensinar algo específico e acionável, nunca conteúdo raso de preenchimento.`;
 
 async function callAnthropic(env, prompt) {
   const apiKey = env.ANTHROPIC_API_KEY;

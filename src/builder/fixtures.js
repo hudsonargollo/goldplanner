@@ -8,7 +8,7 @@ export const SAMPLE_BLOCKS = [
     props: {
       heading: "Sistemas que tiram você da operação",
       subheading: "Automação e produtos digitais para empresas que já cresceram do jeito manual.",
-      ctaLabel: "Falar com a Gold Planner",
+      ctaLabel: "Falar com a Gold Traffic",
       ctaHref: "/contato",
       image: "",
     },
@@ -38,7 +38,7 @@ export const SAMPLE_BLOCKS = [
     type: "testimonial",
     props: {
       items: [
-        { quote: "Mudou como a empresa opera no dia a dia.", name: "Cliente Gold Planner", role: "CEO", avatar: "" },
+        { quote: "Mudou como a empresa opera no dia a dia.", name: "Cliente Gold Traffic", role: "CEO", avatar: "" },
       ],
     },
   },

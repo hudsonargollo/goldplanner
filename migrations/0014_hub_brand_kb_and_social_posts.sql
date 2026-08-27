@@ -1,9 +1,9 @@
--- Brand knowledge base + AI Instagram post generator (Gold Planner Hub AI
+-- Brand knowledge base + AI Instagram post generator (Gold Traffic Hub AI
 -- Instagram Post Generator PRD, 2026-08-12). Two tables:
 --
 -- brand_kb — structured reference content (palette/type/voice/logo/
 -- constraint/positioning), seeded once from three cross-checked sources
--- (GOLD PLANNER BRAND GUIDE.pdf, the live /brand page, docs/BRAND.md) — see
+-- (GOLD TRAFFIC BRAND GUIDE.pdf, the live /brand page, docs/BRAND.md) — see
 -- docs/BRAND_VISUAL_SYSTEM.md for the full writeup and the one PRD
 -- transcription error it corrects (Mineral Black is #141618, not the
 -- PRD's #14161B). This is a structured-data problem, not a retrieval
@@ -60,7 +60,7 @@ INSERT INTO brand_kb (id, category, title, content, structured_value, source, so
 
 -- ── Seed: voice ─────────────────────────────────────────────────────────
 INSERT INTO brand_kb (id, category, title, content, source, sort_order) VALUES
-('bkb-voi-1', 'voice', 'Tom de voz', 'Gold Planner fala devagar. Nunca grita. Quando precisa cortar, corta com clareza.', 'pdf', 1),
+('bkb-voi-1', 'voice', 'Tom de voz', 'Gold Traffic fala devagar. Nunca grita. Quando precisa cortar, corta com clareza.', 'pdf', 1),
 ('bkb-voi-2', 'voice', 'Instagram não é o centro', 'A marca não é o que aparece no Instagram. É o que aparece quando você assina o contrato. Não superindexar em polish social às custas do que realmente importa.', 'pdf', 2);
 
 -- ── Seed: logo construction ─────────────────────────────────────────────
@@ -74,10 +74,10 @@ INSERT INTO brand_kb (id, category, title, content, source, sort_order) VALUES
 
 -- ── Seed: positioning (condensed from docs/BRAND.md) ────────────────────
 INSERT INTO brand_kb (id, category, title, content, source, sort_order) VALUES
-('bkb-pos-1', 'positioning', 'Categoria', 'A GOLD PLANNER é uma consultoria de tecnologia e negócios sob medida — não uma software house, não uma agência de marketing, não uma fábrica de apps genéricos.', 'culture_doc', 1),
+('bkb-pos-1', 'positioning', 'Categoria', 'A GOLD TRAFFIC é uma consultoria de tecnologia e negócios sob medida — não uma software house, não uma agência de marketing, não uma fábrica de apps genéricos.', 'culture_doc', 1),
 ('bkb-pos-2', 'positioning', 'O que se vende', 'Vende-se o processo (qualificação, diagnóstico, desenho, alinhamento, construção, acompanhamento), não a lista de entregáveis. Os produtos finais variam por cliente; o processo não.', 'culture_doc', 2),
 ('bkb-pos-3', 'positioning', 'Tese central', 'Crescimento sustentável não nasce de acúmulo. Nasce de arquitetura. O problema do cliente raramente é falta de ferramenta — é excesso sem direção.', 'culture_doc', 3),
 ('bkb-pos-4', 'positioning', 'Público-alvo', 'Empresários e operadores de negócio validados, 30-50 anos, cuja estrutura está atrasada em relação ao potencial real da empresa. Não fala com curiosos.', 'culture_doc', 4),
-('bkb-pos-5', 'positioning', 'Autoridade', 'Prova por resultado específico e demonstração de raciocínio geram mais autoridade do que promessas amplas. Conteúdo de "autoridade" deve mostrar como a Gold Planner pensa, não apenas afirmar competência.', 'culture_doc', 5),
+('bkb-pos-5', 'positioning', 'Autoridade', 'Prova por resultado específico e demonstração de raciocínio geram mais autoridade do que promessas amplas. Conteúdo de "autoridade" deve mostrar como a Gold Traffic pensa, não apenas afirmar competência.', 'culture_doc', 5),
 ('bkb-pos-6', 'positioning', 'Conversão', 'A mensagem de conversão une clareza e autoridade: não basta parecer sofisticado, é preciso ser entendido — sempre reforçando confiança antes de empurrar oferta.', 'culture_doc', 6),
 ('bkb-pos-7', 'positioning', 'Bastidores', 'Conteúdo de bastidores mostra transparência de processo — etapas, critério, acompanhamento — e a identidade compartilhada dos fundadores como empresários que entendem risco e operação real, não apenas técnicos.', 'culture_doc', 7);

@@ -1,5 +1,5 @@
 /**
- * GOLD PLANNER Boards realtime sync Worker.
+ * GOLD TRAFFIC Boards realtime sync Worker.
  *
  * Structural sibling of realtime-worker/ (same reason it's a separate Worker:
  * Pages Functions can't define Durable Object classes, only consume one bound

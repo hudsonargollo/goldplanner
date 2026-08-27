@@ -1,6 +1,6 @@
-# Gold Planner Hub — architecture
+# Gold Traffic Hub — architecture
 
-Everything Gold Planner runs on the web, in one repo, unified under `goldplanner.clubemkt.digital` with no
+Everything Gold Traffic runs on the web, in one repo, unified under `goldplanner.clubemkt.digital` with no
 subdomains. Four surfaces, four independent Cloudflare deployments, one shared database.
 
 | Path | What | Deployment | Repo location |
@@ -186,11 +186,11 @@ untouched. Deployed live at `goldplanner.clubemkt.digital/formv2`.
 
 **Section spacing and FAQ position are shared with production `/`.** `AgitacaoSection`,
 `ProcessoSection`, `ObjetivoSection`, `QualificacaoFitSection`, `AutoridadeSection`, and
-`HubGoldPlannerSection` are the same component files on both `app/page.tsx` and `app/formv2/
+`HubGoldTrafficSection` are the same component files on both `app/page.tsx` and `app/formv2/
 page.tsx`, so tightening their `py-*` boundary padding (each seam went from `py-16 sm:py-24` on
 both sides to `pt/pb-12 sm:pt/pb-16`, matching the asymmetric pattern `AgitacaoSection`/
 `ProcessoSection` already used) to cut scroll friction toward the form applies to both pages at
-once. `FaqSection` moved from mid-flow (before `HubGoldPlannerSection`) to after the form
+once. `FaqSection` moved from mid-flow (before `HubGoldTrafficSection`) to after the form
 (`QualificacaoSection`/`QualificacaoSectionV2`), now the last content section before `Footer` on
 both pages.
 
@@ -226,7 +226,7 @@ One database, `migrations/` in numbered order. Grouped by when each module shipp
 ## The CRM
 
 Modeled on a legal-consultancy CRM built for a sister product (`codigo-internacional`),
-re-personaed for Gold Planner's own business. The `goldplanner-crm` Worker (`worker/crm-entry.js`)
+re-personaed for Gold Traffic's own business. The `goldplanner-crm` Worker (`worker/crm-entry.js`)
 still owns every `/crm/api/*` route, but there's no standalone `/crm` frontend anymore — a
 direct page visit 302s to `/hub`. Dashboard/Pipeline/Vendas live inside the Hub app as
 `CrmPanel` (`src/crm/CrmPanel.jsx`), and the WhatsApp/URL link manager as its own top-level
@@ -240,7 +240,7 @@ Hono routes only ever exist at `/crm/api/*` regardless of which page issued the 
 Visually, the CRM uses the exact same light Ivory Clay/Mineral Black design system as the
 rest of the app — an earlier pass gave it its own dark "Mineral" theme
 (`src/crm/crm-theme.css`, since deleted) modeled on `codigo-internacional`'s own CRM, but
-that was a deviation from the rest of Gold Planner's product surface (Hub/Portal/marketing are
+that was a deviation from the rest of Gold Traffic's product surface (Hub/Portal/marketing are
 all light-themed, `#EFE8DC` theme-color), not something to bind to — removed entirely rather
 than kept as an option.
 
@@ -286,13 +286,13 @@ before this ever touched production — see the PR/commit history for the exact 
 `worker/lib/crmKbService.js`) — same pattern as the legal-consultancy reference (locked
 persona + two-tier keyword-overlap KB retrieval, Claude call, fail-open on any error
 including a missing API key), repersona'd as a *digital business specialist* recommending
-Gold Planner's own services. Two modes, same underlying service:
+Gold Traffic's own services. Two modes, same underlying service:
 - **ask** — free-text question about a lead.
 - **suggest** — no question, just the lead's profile; returns recommended directions.
 
 Approving a logged question promotes it into `kb_documents` as a `faq`-tier entry — a
 self-improving loop, same as the reference. **The knowledge base starts empty** — it needs
-Gold Planner's real service catalog, pricing, and case studies seeded before the copilot is
+Gold Traffic's real service catalog, pricing, and case studies seeded before the copilot is
 useful for anything beyond the fail-open placeholder.
 
 **Deleting a lead** (`DELETE /crm/api/leads/:id`, added 2026-08-21) is gated to a single
@@ -440,7 +440,7 @@ mask's fully-opaque zone, completely bypassing the fade regardless of how correc
 was. If a future illustration still shows a hard edge after checking the mask math, check this
 first: is the image's own rendered content actually reaching the container's edges?
 
-**Hub Gold Planner section is a real video, not a mock.** `marketing/public/video/hub-goldplanner.mp4`
+**Hub Gold Traffic section is a real video, not a mock.** `marketing/public/video/hub-goldplanner.mp4`
 (1080p, h264, no audio, ~4.7MB — compressed from an 83MB/4K source via `ffmpeg -vf scale=1920:-2
 -crf 26 -an`) plays muted/looped/no-controls, masked at the edges so it reads as page background
 rather than an embedded player. It replaced an earlier 420vh scroll-hijacking sequence that
@@ -462,13 +462,13 @@ spoiler-blocker, not real auth. **Doesn't affect `/hub`, `/portal`, `/crm`** —
 Workers Routes that intercept requests before they ever reach this Pages Worker. Remove
 `middleware.ts` (and the `app/gate/` tree) once the site is ready to go public.
 
-**Hub Gold Planner video is framed, not blended.** Originally the video was masked at the edges to
+**Hub Gold Traffic video is framed, not blended.** Originally the video was masked at the edges to
 blend into the dark background (see above); that was later reversed to a deliberate "premium
 reveal" treatment — `.frame-gold` (metallic gradient border + glossy diagonal light-sweep
 pseudo-element) and `.vignette-frame` (radial-gradient corner darkening on the video itself),
 both in `app/globals.css`. If asked to touch this again, know that "blends into the page" and
 "glossy premium frame" are two different, previously-tried directions — check which one is
-currently live in `HubGoldPlannerSection.tsx` before assuming.
+currently live in `HubGoldTrafficSection.tsx` before assuming.
 
 **Real Gemini image generation works, but not the obvious way.** A third-party Claude Code skill
 (`nano-banana`, installed via `npx skillfish add`) targets an OpenAI-compatible `chat.completions`
@@ -727,11 +727,11 @@ reference against the routes portal can actually reach.
    `env.NOTIFY_FROM` was unset in production (`wrangler pages secret list --project-name=goldplanner-app`
    confirmed it wasn't there, and `wrangler.toml`'s `[vars]` block — where the correct value
    already lived — is a Workers-only construct `wrangler pages deploy` never reads), so
-   `functions/api/kanban/[[path]].js:243`'s fallback (`"GOLD PLANNER <notificacoes@goldplanner.clubemkt.digital>"`,
+   `functions/api/kanban/[[path]].js:243`'s fallback (`"GOLD TRAFFIC <notificacoes@goldplanner.clubemkt.digital>"`,
    the unverified address) was firing on every @mention email. Fixed with
    `wrangler pages secret put NOTIFY_FROM --project-name=goldplanner-app` (same effect as the
    dashboard Settings → Variables path, no redeploy needed since Pages secrets are injected at
-   request time, not baked into `dist/`) — now set to `GOLD PLANNER <notificacoes@send.goldplanner.clubemkt.digital>`,
+   request time, not baked into `dist/`) — now set to `GOLD TRAFFIC <notificacoes@send.goldplanner.clubemkt.digital>`,
    matching the already-correct Worker configs. Not live-tested with a real @mention (would send
    an actual email) — verified by confirming the secret exists and reading the fallback logic.
 4. **CRM content** — ~~author a `workflow_templates` row named exactly "Onboarding padrão"~~
@@ -739,7 +739,7 @@ reference against the routes portal can actually reach.
    collection → build → review → launch), created via the AdminPanel templates API, id
    `8f8e1f3580fe` — this is the fallback the adaptive onboarding feature (see
    `~/.claude/plans/goldplanner-adaptive-onboarding.md`) applies when a won lead has no
-   `project_type`/brief signal. Still open: seed `kb_documents` with Gold Planner's real service
+   `project_type`/brief signal. Still open: seed `kb_documents` with Gold Traffic's real service
    catalog/pricing/case studies.
 5. **`crm_role` grants** — `hudsonargollo2@gmail.com` has
    `admin`. Nobody else has a grant yet. No admin UI for this (low

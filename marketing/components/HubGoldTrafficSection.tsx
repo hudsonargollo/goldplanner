@@ -11,7 +11,7 @@ const EASE = [0.22, 1, 0.36, 1] as [number, number, number, number];
 // text + CTA moment; re-add the frame-gold/vignette-frame video block
 // below (git history has the exact markup, see the commit that removed
 // this comment) once there's a version ready to ship.
-export default function HubGoldPlannerSection() {
+export default function HubGoldTrafficSection() {
   return (
     <section className="relative overflow-hidden bg-ink-950 pt-12 pb-6 sm:pt-16 sm:pb-16">
       <div className="absolute inset-0 bp-lines-ink opacity-40" aria-hidden />
@@ -35,7 +35,7 @@ export default function HubGoldPlannerSection() {
           transition={{ duration: 0.6, delay: 0.1, ease: EASE }}
           className="text-balance text-2xl sm:text-4xl font-bold leading-snug tracking-display text-ivory"
         >
-          GOLD PLANNER. A operação do seu projeto, exposta em tempo real.
+          GOLD TRAFFIC. A operação do seu projeto, exposta em tempo real.
         </motion.p>
         <motion.p
           initial={{ opacity: 0, y: 16 }}

@@ -17,7 +17,7 @@ export default function CustomerTopBar() {
       <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
         <LogoMark width={22} height={22} />
         <View style={{ flexDirection: "column" }}>
-          <Text style={styles.title}>GOLD PLANNER</Text>
+          <Text style={styles.title}>GOLD TRAFFIC</Text>
         </View>
       </View>
       <Pressable onPress={signOut} style={styles.signOutBtn}>

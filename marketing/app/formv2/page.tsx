@@ -7,7 +7,7 @@ import ObjetivoSection from "@/components/ObjetivoSection";
 import QualificacaoFitSection from "@/components/QualificacaoFitSection";
 import AutoridadeSection from "@/components/AutoridadeSection";
 import FaqSection from "@/components/FaqSection";
-import HubGoldPlannerSection from "@/components/HubGoldPlannerSection";
+import HubGoldTrafficSection from "@/components/HubGoldTrafficSection";
 import Footer from "@/components/Footer";
 import QualificacaoSectionV2 from "@/components/formv2/QualificacaoSectionV2";
 
@@ -31,7 +31,7 @@ export default function FormV2() {
         <ObjetivoSection />
         <QualificacaoFitSection />
         <AutoridadeSection />
-        <HubGoldPlannerSection />
+        <HubGoldTrafficSection />
         <QualificacaoSectionV2 />
         <FaqSection />
       </main>

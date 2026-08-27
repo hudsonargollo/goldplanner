@@ -8,7 +8,7 @@ import { trackEvent } from "@/lib/analytics";
 
 const WHATSAPP_URL =
   "https://wa.me/5547989110551?text=" +
-  encodeURIComponent("Fui aprovado na qualificação da Gold Planner e quero agendar minha call de diagnóstico.");
+  encodeURIComponent("Fui aprovado na qualificação da Gold Traffic e quero agendar minha call de diagnóstico.");
 
 type Option = { value: string; label: string };
 
@@ -393,7 +393,7 @@ export default function QualificacaoSection() {
             <div className="hidden lg:block">
               <p className="label-tech mb-4">Processo seletivo</p>
               <h2 className="text-balance text-3xl sm:text-4xl font-bold leading-tight text-ink">
-                A Gold Planner seleciona seus parceiros.
+                A Gold Traffic seleciona seus parceiros.
               </h2>
               <p className="mt-5 text-pretty leading-relaxed text-ink/60">
                 Não somos uma consultoria de massas. Operamos com no máximo duas
@@ -448,7 +448,7 @@ export default function QualificacaoSection() {
                   >
                     <p className="label-tech mb-4">Processo seletivo</p>
                     <h2 className="text-balance text-3xl font-bold leading-tight text-ink">
-                      A Gold Planner seleciona seus parceiros.
+                      A Gold Traffic seleciona seus parceiros.
                     </h2>
                     <p className="mt-5 text-pretty leading-relaxed text-ink/60">
                       Não somos uma consultoria de massas. Operamos com no
@@ -625,7 +625,7 @@ export default function QualificacaoSection() {
                   <p className="mt-3 max-w-sm text-sm leading-relaxed text-ink/60">
                     Com base nas suas respostas, este ainda não parece ser o
                     momento ideal para avançarmos para uma call de diagnóstico
-                    com a Gold Planner.
+                    com a Gold Traffic.
                   </p>
                   <p className="mt-3 max-w-sm text-sm leading-relaxed text-ink/60">
                     Nosso modelo atual é direcionado a empresas em um momento
@@ -645,7 +645,7 @@ export default function QualificacaoSection() {
                     <Check className="h-7 w-7" />
                   </div>
                   <h3 className="mt-5 text-xl font-bold text-ink">
-                    Sua empresa foi aprovada na análise inicial da Gold Planner.
+                    Sua empresa foi aprovada na análise inicial da Gold Traffic.
                   </h3>
                   <p className="mt-3 max-w-sm text-sm leading-relaxed text-ink/60">
                     Com base nas suas respostas há potencial para construirmos
@@ -654,7 +654,7 @@ export default function QualificacaoSection() {
                   </p>
                   <p className="mt-3 max-w-sm text-sm leading-relaxed text-ink/60">
                     Você terá acesso a uma call de diagnóstico diretamente com
-                    Pedro Silvestrini, fundador e CEO da Gold Planner. Para liberar
+                    Pedro Silvestrini, fundador e CEO da Gold Traffic. Para liberar
                     o acesso à agenda, inicie o contato com nossa equipe pelo
                     WhatsApp abaixo.
                   </p>
@@ -683,7 +683,7 @@ export default function QualificacaoSection() {
                   <p className="mt-5 max-w-xs text-sm leading-relaxed text-ink/60">
                     Nossa IA está analisando suas respostas, cruzando as
                     informações da sua empresa com os critérios de seleção da
-                    Gold Planner.
+                    Gold Traffic.
                   </p>
                   <div className="mt-6 space-y-2">
                     {ANALYZING_LINES.map((line, i) => (
@@ -886,7 +886,7 @@ export default function QualificacaoSection() {
                   )}
 
                   {step === "investment" && (
-                    <Field label="A Gold Planner desenvolve projetos sob medida, com investimentos a partir de R$ 20.000. Você está preparado para esse investimento?">
+                    <Field label="A Gold Traffic desenvolve projetos sob medida, com investimentos a partir de R$ 20.000. Você está preparado para esse investimento?">
                       <ChoiceList
                         options={investmentOptions}
                         value={data.investment}
@@ -915,7 +915,7 @@ export default function QualificacaoSection() {
                           className="mt-0.5 h-4 w-4 rounded border-sand-dark/40 text-green focus:ring-green"
                         />
                         Ao enviar este formulário, você concorda com o tratamento
-                        dos seus dados pessoais pela Gold Planner para análise da sua
+                        dos seus dados pessoais pela Gold Traffic para análise da sua
                         solicitação, contato comercial, condução do processo de
                         qualificação e envio de comunicações de marketing
                         (novidades, conteúdos e ofertas). Você pode revogar esse

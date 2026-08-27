@@ -19,7 +19,7 @@ import PickerModal, { type PickerOption } from "@/components/CardDetail/PickerMo
 
 // Port of src/components/SocialPostGenerator.jsx — Phase 10 of
 // ~/.claude/plans/goldplanner-mobile-parity.md. Compositing (caption band +
-// Gold Planner watermark) moved server-side (worker/lib/socialCompositor.js,
+// Gold Traffic watermark) moved server-side (worker/lib/socialCompositor.js,
 // see that module's docstring for the visual-fidelity caveats vs. web's
 // old canvas rendering) specifically so mobile doesn't need a heavy
 // react-native-skia dependency — this screen just displays/downloads the

@@ -60,5 +60,5 @@ INSERT INTO blog_pillars (id, name, slug, description, prompt_seed) VALUES
    'Para quem sabe que existe mais potencial dentro da empresa atual: vender mais, melhorar processos, aumentar eficiência.',
    'Escreva sobre estratégias de crescimento, otimização de processos comerciais, e como transformar tecnologia em nova receita recorrente (SaaS, equity). Tom consultivo e orientado a resultado mensurável.'),
   ('casos-bastidores', 'Casos & Bastidores', 'casos-bastidores',
-   'Bastidores de como a Gold Planner constrói — autoridade e prova social, sem estudo de caso genérico.',
-   'Escreva sobre o processo real de construção da Gold Planner (as três fases: diagnóstico, construção, transformação em receita), decisões de arquitetura, e a filosofia por trás de "duas empresas por mês". Tom pessoal, na voz de quem constrói, nunca promocional.');
+   'Bastidores de como a Gold Traffic constrói — autoridade e prova social, sem estudo de caso genérico.',
+   'Escreva sobre o processo real de construção da Gold Traffic (as três fases: diagnóstico, construção, transformação em receita), decisões de arquitetura, e a filosofia por trás de "duas empresas por mês". Tom pessoal, na voz de quem constrói, nunca promocional.');

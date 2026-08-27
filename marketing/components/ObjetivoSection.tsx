@@ -11,7 +11,7 @@ const EASE = [0.22, 1, 0.36, 1] as [number, number, number, number];
 // layered shadow, diagonal gloss overlay, hover lift+tilt). Kept the
 // *mechanics* — depth via stacked shadows, a subtle inset gloss, a slight
 // rotation that straightens on hover — but swapped the reference's bold
-// saturated orange gradient for Gold Planner's own restrained palette (a paper
+// saturated orange gradient for Gold Traffic's own restrained palette (a paper
 // surface with a soft corner tint per card), since a loud full-bleed
 // gradient would fight the rest of the site's editorial, muted language.
 const PROFILES = [
@@ -80,7 +80,7 @@ export default function ObjetivoSection() {
           transition={{ duration: 0.6, ease: EASE }}
           className="mx-auto max-w-3xl text-balance border-l-2 border-green pl-6 text-3xl sm:text-4xl font-bold leading-snug tracking-display text-ink"
         >
-          Cada empresário chega até a Gold Planner buscando construir algo
+          Cada empresário chega até a Gold Traffic buscando construir algo
           diferente.
         </motion.p>
 

@@ -4,9 +4,9 @@ import { motion, useTransform, type MotionValue } from "framer-motion";
 import { Clock, User } from "lucide-react";
 
 /**
- * Static mock of the Hub Gold Planner client portal — a kanban-style board used
+ * Static mock of the Hub Gold Traffic client portal — a kanban-style board used
  * as the visual subject of the scroll-driven storytelling sequence in
- * HubGoldPlannerSection. Illustrative content, not a live screenshot.
+ * HubGoldTrafficSection. Illustrative content, not a live screenshot.
  */
 
 type Card = { title: string; deadline?: string; assignee?: string };
@@ -84,7 +84,7 @@ export default function HubBoard({
         <span className="h-2.5 w-2.5 rounded-full bg-danger/60" />
         <span className="h-2.5 w-2.5 rounded-full bg-warning/60" />
         <span className="h-2.5 w-2.5 rounded-full bg-success-mist/60" />
-        <span className="ml-3 label-tech-ink">Hub Gold Planner</span>
+        <span className="ml-3 label-tech-ink">Hub Gold Traffic</span>
       </div>
 
       <div className="grid grid-cols-3 gap-4">

@@ -7,8 +7,8 @@
      primitives (accordion, progress, form controls) — Tailwind v3 project,
      so these are consumed directly as hex, not through shadcn's v4 @theme
      pipeline. */
-  --ring: #2e4a43; /* Green — focus ring on light surfaces */
-  --ring-ink: #a1aeaa; /* green-mist — focus ring on dark ink surfaces */
+  --ring: #C93B02; /* Green — focus ring on light surfaces */
+  --ring-ink: #F27A49; /* green-mist — focus ring on dark ink surfaces */
   --radius: 0.625rem;
 }
 
@@ -39,26 +39,26 @@ body {
   /* Light-surface elevation (paper layered on ivory) */
   .surface-paper {
     background-color: theme("colors.paper");
-    border: 1px solid rgba(20, 22, 24, 0.08);
+    border: 1px solid rgba(28, 30, 33, 0.08);
   }
   .surface-paper-raised {
     background-color: theme("colors.paper");
-    border: 1px solid rgba(20, 22, 24, 0.1);
-    box-shadow: 0 1px 2px rgba(20, 22, 24, 0.04), 0 8px 24px rgba(20, 22, 24, 0.06);
+    border: 1px solid rgba(28, 30, 33, 0.1);
+    box-shadow: 0 1px 2px rgba(28, 30, 33, 0.04), 0 8px 24px rgba(28, 30, 33, 0.06);
   }
 
-  /* Dark elevation ladder — hero / Hub Gold Planner only, never the page body */
+  /* Dark elevation ladder — hero / Hub Gold Traffic only, never the page body */
   .surface-ink-1 {
     background-color: theme("colors.ink.900");
-    border: 1px solid rgba(239, 232, 220, 0.06);
+    border: 1px solid rgba(242, 243, 245, 0.06);
   }
   .surface-ink-2 {
     background-color: theme("colors.ink.800");
-    border: 1px solid rgba(239, 232, 220, 0.08);
+    border: 1px solid rgba(242, 243, 245, 0.08);
   }
   .surface-ink-3 {
     background-color: theme("colors.ink.700");
-    border: 1px solid rgba(239, 232, 220, 0.1);
+    border: 1px solid rgba(242, 243, 245, 0.1);
   }
 
   /* Glass panel for floating UI on ink surfaces */
@@ -66,16 +66,16 @@ body {
     background: rgba(26, 28, 30, 0.6);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
-    border: 1px solid rgba(239, 232, 220, 0.08);
+    border: 1px solid rgba(242, 243, 245, 0.08);
   }
 
   /* Contained, non-neon glow — brand rule: no halo effects on the logo,
      used sparingly on primary CTAs only */
   .glow-action {
-    box-shadow: 0 0 0 1px rgba(46, 74, 67, 0.25), 0 8px 24px rgba(46, 74, 67, 0.18);
+    box-shadow: 0 0 0 1px rgba(201, 59, 2, 0.25), 0 8px 24px rgba(201, 59, 2, 0.18);
   }
   .glow-action-ink {
-    box-shadow: 0 0 0 1px rgba(161, 174, 170, 0.3), 0 8px 28px rgba(161, 174, 170, 0.12);
+    box-shadow: 0 0 0 1px rgba(242, 122, 73, 0.3), 0 8px 28px rgba(242, 122, 73, 0.12);
   }
 
   /* Eyebrow / technical label */
@@ -96,8 +96,9 @@ body {
 
   /* Editorial line — manifesto/quote treatment, never body copy */
   .text-editorial {
-    font-family: var(--font-eb-garamond), Georgia, serif;
+    font-family: var(--font-inter), system-ui, sans-serif;
     font-style: italic;
+    font-weight: 500;
   }
 }
 
@@ -107,10 +108,10 @@ body {
 .bp-lines {
   background-image: linear-gradient(
       to right,
-      rgba(20, 22, 24, 0.05) 1px,
+      rgba(28, 30, 33, 0.05) 1px,
       transparent 1px
     ),
-    linear-gradient(to bottom, rgba(20, 22, 24, 0.05) 1px, transparent 1px);
+    linear-gradient(to bottom, rgba(28, 30, 33, 0.05) 1px, transparent 1px);
   background-size: 64px 64px;
 }
 
@@ -118,10 +119,10 @@ body {
 .bp-lines-ink {
   background-image: linear-gradient(
       to right,
-      rgba(239, 232, 220, 0.05) 1px,
+      rgba(242, 243, 245, 0.05) 1px,
       transparent 1px
     ),
-    linear-gradient(to bottom, rgba(239, 232, 220, 0.05) 1px, transparent 1px);
+    linear-gradient(to bottom, rgba(242, 243, 245, 0.05) 1px, transparent 1px);
   background-size: 64px 64px;
 }
 
@@ -129,7 +130,7 @@ body {
 .bp-dots {
   background-image: radial-gradient(
     circle,
-    rgba(199, 183, 156, 0.35) 1px,
+    rgba(182, 185, 191, 0.35) 1px,
     transparent 1px
   );
   background-size: 30px 30px;
@@ -242,7 +243,7 @@ body {
 }
 
 /* Glossy gold bezel — frames premium/hero media (currently only the Hub
-   Gold Planner video) in the brand's Ochre/sand metal tones: a metallic-gradient
+   Gold Traffic video) in the brand's Ochre/sand metal tones: a metallic-gradient
    border, a soft ambient gold glow behind it, and a diagonal light-sweep
    highlight layered on top so the border reads as brushed/polished metal
    catching light rather than a flat CSS border. Apply to the OUTER wrapper
@@ -367,18 +368,18 @@ body {
   width: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #efe8dc;
+  background: #f2f3f5;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(20, 22, 24, 0.18);
+  background: rgba(28, 30, 33, 0.18);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(46, 74, 67, 0.4);
+  background: rgba(201, 59, 2, 0.4);
 }
 
 ::selection {
-  background: rgba(46, 74, 67, 0.2);
-  color: #141618;
+  background: rgba(201, 59, 2, 0.2);
+  color: #1c1e21;
 }
 

@@ -18,9 +18,9 @@ import { LEAD_STATUSES, TIER_COLOR, TIER_LABEL, waLink, timeAgo, withAlpha } fro
 
 // Kanban pipeline board — ports the structure/interaction model of Código
 // Internacional's own CrmLeads.jsx (drag-and-drop lanes, search, filter
-// side panel) onto Gold Planner's simpler single-funnel lead schema. Unlike CI,
+// side panel) onto Gold Traffic's simpler single-funnel lead schema. Unlike CI,
 // this fetches the full lead list once (crmApi.listLeads(), no status
-// filter/pagination split) — Gold Planner's lead volume doesn't need CI's
+// filter/pagination split) — Gold Traffic's lead volume doesn't need CI's
 // server-side pagination/stats-endpoint split.
 export default function CrmLeads({ onOpenLead }) {
   const [leads, setLeads] = useState(null);

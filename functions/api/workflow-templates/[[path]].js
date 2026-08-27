@@ -1,4 +1,4 @@
-// Admin-authored workflow templates — Phase 7 of Hub Gold Planner (PRD §5.4).
+// Admin-authored workflow templates — Phase 7 of Hub Gold Traffic (PRD §5.4).
 // ADMIN only, both to manage templates and to trigger applying one to a
 // project. Applying bulk-inserts rows straight into the D1 `tasks` table
 // (see migrations/0003_hub_tasks.sql) — same table the live Kanban board

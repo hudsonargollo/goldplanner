@@ -102,7 +102,7 @@ const ANALYSIS_SCHEMA = {
 function buildPrompt(transcript, title, clients, members) {
   const projectList = clients.map((c) => `- ${c.name}`).join("\n") || "(nenhum)";
   const memberList = members.map((m) => `- ${m.name}`).join("\n") || "(nenhum)";
-  return `Você analisa transcrições/anotações de reuniões da equipe GOLD PLANNER e devolve JSON estruturado em português do Brasil.
+  return `Você analisa transcrições/anotações de reuniões da equipe GOLD TRAFFIC e devolve JSON estruturado em português do Brasil.
 
 PROJETOS EXISTENTES (associe a reunião a UM destes pelo nome quando fizer sentido; caso nenhum sirva, proponha um nome de projeto curto e claro):
 ${projectList}
@@ -230,7 +230,7 @@ const INTERVIEW_TOOL = {
   },
 };
 
-const INTERVIEW_SYSTEM_PROMPT = `Você conduz uma entrevista curta e focada, em português do Brasil, para ajudar um profissional da GOLD PLANNER a documentar uma tarefa concluída ou em andamento. Seu objetivo final é produzir:
+const INTERVIEW_SYSTEM_PROMPT = `Você conduz uma entrevista curta e focada, em português do Brasil, para ajudar um profissional da GOLD TRAFFIC a documentar uma tarefa concluída ou em andamento. Seu objetivo final é produzir:
 
 1. Uma descrição em texto simples (sem markdown, sem #, sem **, sem listas com "-") dividida em quatro seções, cada uma introduzida por um cabeçalho em maiúsculas:
    - O DESAFIO: qual bug ou nova funcionalidade está sendo resolvido/construído.

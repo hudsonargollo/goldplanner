@@ -19,7 +19,7 @@ compatibility_flags = ["nodejs_compat"]
 binding = "KANBAN"
 id = "7ca7e269f18f4b938f505883b0933e1c"
 
-# D1 — Hub Gold Planner relational data (users/projects/tasks/contracts/invoices/
+# D1 — Hub Gold Traffic relational data (users/projects/tasks/contracts/invoices/
 # addons/internal finances). KV above stays for what it's already good at
 # (push subscriptions, per-user todos, notification log) — this is additive,
 # not a replacement. See migrations/ for schema.

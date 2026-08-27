@@ -1,8 +1,8 @@
-# Gold Planner marketing site
+# Gold Traffic marketing site
 
 The public-facing site at `goldplanner.clubemkt.digital` — landing page + the shared `/login` page used
-by every other Gold Planner surface (`/hub`, `/portal`, `/crm`, all deployed from the parent
-repo). This is part of the [Gold Planner Hub monorepo](../README.md) — see
+by every other Gold Traffic surface (`/hub`, `/portal`, `/crm`, all deployed from the parent
+repo). This is part of the [Gold Traffic Hub monorepo](../README.md) — see
 [`../docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md) for how this site fits into the whole
 system (it stays on Cloudflare Pages while the other three surfaces run on Workers — read
 that doc's "Marketing site: Pages, not Workers" section for why).
@@ -13,7 +13,7 @@ that doc's "Marketing site: Pages, not Workers" section for why).
 
 ## `/login`
 
-`app/login/page.tsx` is the one login entry point for every Gold Planner account — staff,
+`app/login/page.tsx` is the one login entry point for every Gold Traffic account — staff,
 admin, or customer. It calls `/hub/api/auth/*` directly (same-origin fetch, no CORS issue
 since everything's under `goldplanner.clubemkt.digital`) and redirects by `access_role` after success:
 `CUSTOMER` → `/portal`, everyone else → `/hub`. See the parent repo's
@@ -47,7 +47,7 @@ app/
   layout.tsx, globals.css  fonts, design tokens (label-tech, text-editorial, surface-paper…)
 components/                one file per homepage section (HeroSection, AgitacaoSection,
                             ProcessoSection, ObjetivoSection, QualificacaoFitSection,
-                            AutoridadeSection, FaqSection, HubGoldPlannerSection,
+                            AutoridadeSection, FaqSection, HubGoldTrafficSection,
                             QualificacaoSection), plus SectionBlob (decorative), Navbar, Footer
 components/ui/              shadcn-derived primitives (accordion, button, progress)
 lib/utils.ts                 shared helpers

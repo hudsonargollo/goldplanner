@@ -5,16 +5,16 @@ import MarkdownBody from "@/components/MarkdownBody";
 import Logo from "@/components/Logo";
 
 export const metadata = {
-  title: "Política de Privacidade — Gold Planner",
+  title: "Política de Privacidade — Gold Traffic",
 };
 
-const CONTENT = `A Gold Planner respeita a sua privacidade e está comprometida com a proteção dos dados pessoais tratados por meio de seu site, formulários, canais de atendimento e processos comerciais.
+const CONTENT = `A Gold Traffic respeita a sua privacidade e está comprometida com a proteção dos dados pessoais tratados por meio de seu site, formulários, canais de atendimento e processos comerciais.
 
 Esta Política de Privacidade explica de forma clara quais informações podemos coletar, como utilizamos esses dados, com quem eles podem ser compartilhados e quais direitos você possui em relação aos seus dados pessoais, em conformidade com a Lei Geral de Proteção de Dados Pessoais — LGPD.
 
 ## 1. QUEM SOMOS
 
-A Gold Planner é uma marca operada por:
+A Gold Traffic é uma marca operada por:
 
 [Razão Social a definir]
 CNPJ: [a definir]
@@ -25,7 +25,7 @@ Para fins da legislação de proteção de dados, a empresa acima indicada poder
 
 ## 2. QUAIS DADOS PODEMOS COLETAR
 
-Dependendo da forma como você interage com a Gold Planner, podemos coletar informações como:
+Dependendo da forma como você interage com a Gold Traffic, podemos coletar informações como:
 
 - Nome;
 - E-mail;
@@ -44,15 +44,15 @@ Dependendo da forma como você interage com a Gold Planner, podemos coletar info
 
 Também poderão ser coletadas informações técnicas relacionadas à utilização do site, como endereço IP, navegador, dispositivo, páginas acessadas e dados obtidos por meio de cookies ou tecnologias semelhantes.
 
-A Gold Planner busca limitar a coleta ao que seja adequado e necessário para as finalidades informadas, em conformidade com os princípios previstos na LGPD.
+A Gold Traffic busca limitar a coleta ao que seja adequado e necessário para as finalidades informadas, em conformidade com os princípios previstos na LGPD.
 
 ## 3. COMO UTILIZAMOS SEUS DADOS
 
 Seus dados pessoais poderão ser utilizados para:
 
-- Analisar solicitações enviadas à Gold Planner;
+- Analisar solicitações enviadas à Gold Traffic;
 - Realizar processos de qualificação comercial;
-- Avaliar a compatibilidade entre sua empresa e o perfil de projetos atendidos pela Gold Planner;
+- Avaliar a compatibilidade entre sua empresa e o perfil de projetos atendidos pela Gold Traffic;
 - Entrar em contato para dar continuidade a uma solicitação;
 - Agendar e conduzir calls de diagnóstico;
 - Compreender necessidades, gargalos e oportunidades do negócio;
@@ -70,7 +70,7 @@ Dependendo da finalidade e do contexto, o tratamento poderá ocorrer com fundame
 
 ## 4. QUALIFICAÇÃO AUTOMATIZADA E INTELIGÊNCIA ARTIFICIAL
 
-A Gold Planner poderá utilizar sistemas, automações, regras de negócio, pontuações e, quando aplicável, recursos de inteligência artificial para auxiliar na análise das informações fornecidas durante seu processo de qualificação.
+A Gold Traffic poderá utilizar sistemas, automações, regras de negócio, pontuações e, quando aplicável, recursos de inteligência artificial para auxiliar na análise das informações fornecidas durante seu processo de qualificação.
 
 Essa análise poderá considerar fatores como:
 
@@ -79,7 +79,7 @@ Essa análise poderá considerar fatores como:
 - Urgência para execução;
 - Disponibilidade para investimento;
 - Participação no processo de decisão;
-- Compatibilidade com o perfil de projetos atendidos pela Gold Planner.
+- Compatibilidade com o perfil de projetos atendidos pela Gold Traffic.
 
 Essas informações poderão ser utilizadas para organizar prioridades comerciais e indicar qual próxima etapa estará disponível no processo.
 
@@ -87,7 +87,7 @@ Nos casos em que uma decisão que afete seus interesses seja tomada unicamente c
 
 ## 5. COMPARTILHAMENTO DE DADOS
 
-A Gold Planner não vende seus dados pessoais.
+A Gold Traffic não vende seus dados pessoais.
 
 Para viabilizar sua operação, determinadas informações poderão ser compartilhadas ou tratadas por fornecedores e parceiros necessários à prestação dos serviços, incluindo:
 
@@ -106,7 +106,7 @@ Sempre que aplicável, buscamos limitar o acesso às informações necessárias 
 
 ## 6. TRANSFERÊNCIA INTERNACIONAL DE DADOS
 
-Alguns fornecedores utilizados pela Gold Planner podem armazenar ou processar informações em servidores localizados fora do Brasil.
+Alguns fornecedores utilizados pela Gold Traffic podem armazenar ou processar informações em servidores localizados fora do Brasil.
 
 Quando houver transferência internacional de dados pessoais, serão observadas as regras e salvaguardas aplicáveis previstas na LGPD e na regulamentação da Autoridade Nacional de Proteção de Dados — ANPD. A ANPD possui regulamentação específica para essas operações.
 
@@ -126,7 +126,7 @@ Quando não houver mais finalidade ou fundamento jurídico que justifique a cons
 
 ## 8. SEGURANÇA
 
-A Gold Planner busca adotar medidas técnicas, administrativas e organizacionais adequadas para proteger os dados pessoais contra situações como:
+A Gold Traffic busca adotar medidas técnicas, administrativas e organizacionais adequadas para proteger os dados pessoais contra situações como:
 
 - Acesso não autorizado;
 - Perda;
@@ -139,7 +139,7 @@ A LGPD exige que agentes de tratamento adotem medidas voltadas à segurança e p
 
 ## 9. COOKIES E TECNOLOGIAS SEMELHANTES
 
-O site da Gold Planner poderá utilizar cookies e tecnologias semelhantes para:
+O site da Gold Traffic poderá utilizar cookies e tecnologias semelhantes para:
 
 - Garantir o funcionamento adequado do site;
 - Entender como os visitantes utilizam nossas páginas;
@@ -152,9 +152,9 @@ Quando necessário, você poderá gerenciar suas preferências por meio do mecan
 
 ## 10. COMUNICAÇÕES COMERCIAIS
 
-Quando houver base legal adequada, a Gold Planner poderá utilizar seus dados de contato para continuar um relacionamento comercial iniciado por você e enviar informações relacionadas aos nossos serviços, projetos, conteúdos ou oportunidades.
+Quando houver base legal adequada, a Gold Traffic poderá utilizar seus dados de contato para continuar um relacionamento comercial iniciado por você e enviar informações relacionadas aos nossos serviços, projetos, conteúdos ou oportunidades.
 
-Quando aplicável, você poderá solicitar a interrupção de comunicações comerciais pelos canais disponibilizados pela Gold Planner.
+Quando aplicável, você poderá solicitar a interrupção de comunicações comerciais pelos canais disponibilizados pela Gold Traffic.
 
 ## 11. SEUS DIREITOS
 
@@ -179,7 +179,7 @@ Por razões de segurança, poderemos solicitar informações adicionais para con
 
 ## 12. DADOS DE CRIANÇAS E ADOLESCENTES
 
-Os serviços e processos comerciais da Gold Planner são direcionados principalmente a empresários, profissionais e representantes de empresas.
+Os serviços e processos comerciais da Gold Traffic são direcionados principalmente a empresários, profissionais e representantes de empresas.
 
 Não buscamos coletar intencionalmente dados de crianças por meio dos nossos formulários comerciais.
 
@@ -195,13 +195,13 @@ A versão mais recente permanecerá disponível nesta página, acompanhada da da
 
 Para dúvidas, solicitações ou assuntos relacionados à privacidade e proteção de dados:
 
-GOLD PLANNER
+GOLD TRAFFIC
 Operada por [Razão Social a definir]
 CNPJ: [a definir]
 E-mail de privacidade: Matrix@goldplanner.clubemkt.digital
 Endereço: Avenida Miguel Sutil, nº 8388, Sala 409, Santa Rosa, Cuiabá/MT, CEP 78.040-365
 
-Caso a Gold Planner se enquadre como agente de tratamento de pequeno porte, a regulamentação da ANPD prevê hipóteses em que a indicação formal de encarregado não é obrigatória, embora deva existir canal de comunicação adequado com os titulares.`;
+Caso a Gold Traffic se enquadre como agente de tratamento de pequeno porte, a regulamentação da ANPD prevê hipóteses em que a indicação formal de encarregado não é obrigatória, embora deva existir canal de comunicação adequado com os titulares.`;
 
 export default function PoliticaDePrivacidadePage() {
   return (

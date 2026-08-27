@@ -1,4 +1,4 @@
-// Verbatim port of goldplanner-app's web `src/lib/constants.js` — GOLD PLANNER v2
+// Verbatim port of goldplanner-app's web `src/lib/constants.js` — GOLD TRAFFIC v2
 // "Mineral" palette. Keep in sync by hand with the web source.
 
 export type ColumnId = "backlog" | "todo" | "inprogress" | "review" | "done";

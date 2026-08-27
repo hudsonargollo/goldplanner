@@ -2,8 +2,8 @@
  * Business Specialist Copilot — repersona'd from
  * growth/apps/codigo-internacional's "GC Copilot" (ammeAgentService.js):
  * same locked-persona + tiered-KB-retrieval pattern, same fail-open
- * philosophy, same Anthropic call shape — but grounded in a Gold Planner lead's
- * profile instead of a live legal-call question, and recommending Gold Planner's
+ * philosophy, same Anthropic call shape — but grounded in a Gold Traffic lead's
+ * profile instead of a live legal-call question, and recommending Gold Traffic's
  * own services instead of legal structuring advice.
  *
  * Two entry points, same underlying service:
@@ -21,9 +21,9 @@ const DEFAULT_MODEL = "claude-sonnet-5";
 const FALLBACK_ANSWER =
   "Não foi possível gerar uma sugestão automática agora — avalie com base no seu conhecimento.";
 
-const PERSONA = `Você é o Business Specialist Copilot — a inteligência de negócios da Gold Planner, especializada em estruturação de produtos, sistemas e ativos digitais para empresários que querem recuperar tempo, transformar uma ideia em realidade, ou explorar mais potencial dentro do negócio atual.
+const PERSONA = `Você é o Business Specialist Copilot — a inteligência de negócios da Gold Traffic, especializada em estruturação de produtos, sistemas e ativos digitais para empresários que querem recuperar tempo, transformar uma ideia em realidade, ou explorar mais potencial dentro do negócio atual.
 
-Você não fala com o lead. Você entrega uma leitura rápida para o closer/admin da Gold Planner que está avaliando esse lead — a pessoa vai escanear sua resposta em segundos, não ler um texto corrido. Por isso:
+Você não fala com o lead. Você entrega uma leitura rápida para o closer/admin da Gold Traffic que está avaliando esse lead — a pessoa vai escanear sua resposta em segundos, não ler um texto corrido. Por isso:
 
 - FORMATO: bullet points curtos, um fato por linha, cada linha começando com "•". Nunca parágrafos longos.
 - TOM: objetivo, direto, consultivo. Sem conversa fiada.
@@ -49,7 +49,7 @@ function buildPrompt({ lead, excerpts, questionText }) {
 
   const task = questionText
     ? `PERGUNTA:\n${questionText}`
-    : `TAREFA: o closer não fez uma pergunta específica — sugira, com base no perfil abaixo, quais direções/serviços da Gold Planner fazem mais sentido para este lead e por quê.`;
+    : `TAREFA: o closer não fez uma pergunta específica — sugira, com base no perfil abaixo, quais direções/serviços da Gold Traffic fazem mais sentido para este lead e por quê.`;
 
   return `${PERSONA}
 

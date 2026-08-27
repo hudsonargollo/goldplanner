@@ -120,7 +120,7 @@ export default function CustomerShell({ userName, userEmail, userAvatar, onLogou
         <div className="flex items-center gap-2">
           <LogoMark className="h-7 w-auto" />
           <span className="flex flex-col leading-none">
-            <span className="text-sm font-semibold tracking-[0.28em] text-ink">GOLD PLANNER</span>
+            <span className="text-sm font-semibold tracking-[0.28em] text-ink">GOLD TRAFFIC</span>
           </span>
         </div>
         <div className="flex items-center gap-3">

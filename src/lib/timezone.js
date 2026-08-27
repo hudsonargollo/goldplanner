@@ -1,4 +1,4 @@
-// Shared timezone formatting — the org default is São Paulo (where Gold Planner
+// Shared timezone formatting — the org default is São Paulo (where Gold Traffic
 // operates), but a teammate travels (e.g. based in Bolivia at times) and can
 // override it on their own profile (see ProfilePage.jsx). Every absolute
 // date/time shown in the app should format through fmtDateTime() instead of
